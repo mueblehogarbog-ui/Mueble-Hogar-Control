@@ -530,6 +530,8 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
       <div class="cb">
         <div style="font-size:.85rem;margin-bottom:12px;"><strong id="local-count">0</strong> pedidos &nbsp;|&nbsp; <strong id="local-oc-count">0</strong> órdenes de compra guardadas.</div>
         <button class="btn btn-outline" onclick="exportarDatos()" style="width:100%;margin-bottom:8px;">📥 Exportar JSON</button>
+        <button class="btn btn-primary" onclick="sincronizarDesdeSheets()" style="width:100%;margin-bottom:8px;">🔄 Sincronizar desde Sheets</button>
+        <div id="sync-progress" style="display:none;background:#EDE9FE;border-radius:8px;padding:10px;margin-bottom:8px;font-size:.82rem;color:#6D28D9;"></div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <button class="btn" onclick="confirmarBorrar('op')" style="background:var(--red-lt);color:var(--red);border:1.5px solid #FCA5A5;font-weight:700;">🗑️ Borrar todas las OP</button>
           <button class="btn" onclick="confirmarBorrar('oc')" style="background:var(--red-lt);color:var(--red);border:1.5px solid #FCA5A5;font-weight:700;">🗑️ Borrar todas las OC</button>
@@ -1430,17 +1432,19 @@ function generarResumenCortador(){
   const hoy=new Date().toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   // Agrupar todos los items sin importar proveedor
   const agrup=[];
-  _corteRows.forEach(function(row){
+  _corteRows.forEach(function(row,idx){
+    const consEl=document.getElementById('cons-row-'+idx);
+    const cons=consEl?consEl.value.trim():'';
     const key=row.categoria+'|'+row.producto+'|'+row.medida+'|'+row.color;
     const ex=agrup.find(function(x){return x.key===key;});
-    if(ex)ex.cantidad+=(row.cantidad||1);
-    else agrup.push({key,categoria:row.categoria,producto:row.producto,medida:row.medida,color:row.color,cantidad:row.cantidad||1,ops:[row.opId]});
-  });
-  // Add ops list
-  _corteRows.forEach(function(row){
-    const key=row.categoria+'|'+row.producto+'|'+row.medida+'|'+row.color;
-    const ex=agrup.find(function(x){return x.key===key;});
-    if(ex&&!ex.ops.includes(row.opId))ex.ops.push(row.opId);
+    if(ex){
+      ex.cantidad+=(row.cantidad||1);
+      if(cons&&!ex.consecutivos.includes(cons)) ex.consecutivos.push(cons);
+      if(!ex.ops.includes(row.opId)) ex.ops.push(row.opId);
+    } else {
+      agrup.push({key,categoria:row.categoria,producto:row.producto,medida:row.medida,color:row.color,
+        cantidad:row.cantidad||1,ops:[row.opId],consecutivos:cons?[cons]:[],pataLabel:row.pataLabel||''});
+    }
   });
   const filas=agrup.map(function(it,i){
     return '<tr style="background:'+(i%2===0?'#F9FAFB':'white')+';">'
@@ -2096,6 +2100,42 @@ function confirmarBorrar(tipo){
   if(tipo==='op')renderHist();else renderOCList();
   initCfg();alerta('cfg','✅ Historial borrado','ok');
 }
+function sincronizarDesdeSheets(){
+  const url = localStorage.getItem('gc_sheet_url');
+  if(!url){ alerta('cfg','⚠️ Primero configura la URL del Apps Script','warn'); return; }
+  const prog = document.getElementById('sync-progress');
+  if(prog){ prog.style.display='block'; prog.textContent='⏳ Conectando con Sheets...'; }
+
+  fetch(url+'?action=getPedidos')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data||!data.pedidos){
+        if(prog) prog.textContent='❌ No se pudieron cargar los pedidos. Verifica la URL.';
+        return;
+      }
+      const pedidosSheets = data.pedidos||[];
+      const pedidosLocal = STATE.pedidos||[];
+
+      // Merge: Sheets es la fuente de verdad
+      // Mantener pedidos locales que NO están en Sheets (recién creados sin sync)
+      const idsSheets = new Set(pedidosSheets.map(function(p){return p.id;}));
+      const soloLocales = pedidosLocal.filter(function(p){return !idsSheets.has(p.id);});
+
+      // Combinar: Sheets + los que solo están en local
+      STATE.pedidos = pedidosSheets.concat(soloLocales);
+      guardar();
+      actualizarDash();
+      actualizarBadge();
+      renderHist();
+
+      if(prog) prog.textContent='✅ Sincronizado: '+pedidosSheets.length+' pedidos desde Sheets + '+soloLocales.length+' solo locales. Total: '+STATE.pedidos.length;
+      initCfg();
+    })
+    .catch(function(err){
+      if(prog) prog.textContent='❌ Error de conexión: '+err.message;
+    });
+}
+
 function exportarDatos(){
   const d={pedidos:STATE.pedidos,compras:STATE.compras,exportado:new Date().toISOString()};
   const a=document.createElement('a');
@@ -2174,7 +2214,49 @@ function getScriptCode(){
   }
 }
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
+  try {
+    var action = e&&e.parameter&&e.parameter.action ? e.parameter.action : '';
+    if(action==='getPedidos'){
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sh = ss.getSheetByName("Pedidos");
+      if(!sh) return ContentService.createTextOutput(JSON.stringify({pedidos:[]})).setMimeType(ContentService.MimeType.JSON);
+      var vals = sh.getDataRange().getValues();
+      var headers = vals[0];
+      var pedidos = [];
+      // Group rows by N Orden (column 0)
+      var grupos = {};
+      for(var i=1;i<vals.length;i++){
+        var row = vals[i];
+        var id = row[0]; if(!id) continue;
+        if(!grupos[id]){
+          grupos[id] = {
+            id:String(row[0]), fecha:row[1]?Utilities.formatDate(new Date(row[1]),"GMT-5","yyyy-MM-dd"):"",
+            fechaEnt:row[2]?Utilities.formatDate(new Date(row[2]),"GMT-5","yyyy-MM-dd"):"",
+            cliente:row[3]||"", tel:String(row[4]||""), canal:row[5]||"",
+            direccion:row[6]||"", pago:row[7]||"", anticipo:Number(row[8])||0,
+            vendedor:row[9]||"", registradoEn:row[10]||"", entrega:row[11]||"",
+            estado:row[12]||"pendiente", obs:row[22]||"", total:Number(row[21])||0,
+            items:[], synced:true
+          };
+        }
+        if(row[14]){
+          grupos[id].items.push({
+            categoria:row[13]||"", producto:row[14]||"", medida:row[15]||"",
+            color:row[16]||"", cantidad:Number(row[17])||1,
+            herrajeIncluido:row[18]&&row[18]!=="No", herrajePagado:row[18]==="Incluido - Pagado",
+            herrajeValor:row[18]&&row[18]!=="No"?30000:0,
+            pataVal:row[19]&&row[19]!=="No"?row[19]:"no", pataLabel:row[19]||"", pataPrecio:0, pataPagado:false,
+            precio:Number(row[21])||0
+          });
+        }
+      }
+      pedidos = Object.values(grupos);
+      return ContentService.createTextOutput(JSON.stringify({ok:true,pedidos:pedidos})).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err){
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.message})).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 function getOrCreate(ss, name, headers) {
   var sh = ss.getSheetByName(name);
@@ -2186,15 +2268,17 @@ function getOrCreate(ss, name, headers) {
   return sh;
 }
 function savePedido(ss, data) {
-  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","TOTAL","Observaciones"]);
+  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","Patas","Transporte","TOTAL","Observaciones"]);
   var dir = [data.direccion, data.apto?"Apto: "+data.apto:"", data.conjunto||"", data.barrio||"", data.localidad||"", data.ciudad||""].filter(Boolean).join(", ");
   var items = (data.items||[]).filter(function(it){return it&&it.producto;});
   if(items.length===0){
-    sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,"","","","","","No",data.total,data.obs||""]);
+    sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,"","","","","","No","","",data.total,data.obs||""]);
   } else {
     items.forEach(function(it){
       var herrajes = it.herrajeIncluido ? (it.herrajePagado ? "Incluido - Pagado" : "Si - $30.000 CE") : "No";
-      sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,data.total,data.obs||""]);
+      var patas = (it.pataVal&&it.pataVal!=="no") ? it.pataLabel+(it.pataPagado?" - Pagado":" - CE $"+it.pataPrecio) : "No";
+      var transp = data.transpCosto>0 ? (data.transpPagado?"Pagado $"+data.transpCosto:"CE $"+data.transpCosto) : "";
+      sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,patas,transp,data.total,data.obs||""]);
     });
   }
 }
