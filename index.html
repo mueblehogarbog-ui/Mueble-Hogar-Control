@@ -666,7 +666,8 @@ const PATAS_OPTS = [
 
 const PRODS = {
   'Colchones': ['Vangoh','Verona','Mónaco','Biconfort','Montecarlo','Pillow','Premium'],
-  'Base Cama': ['Premium','Pata L madera','Pata Madera 15cm','Cuerotex','Nido','con Cajones','tipo Baúl'],
+  'Base Cama': ['Premium','Pata L madera','Pata Madera 15cm','Cuerotex','Nido','con Cajones','tipo Baúl','tipo Baúl + Herrajes Hidráulicos'],
+  'Sofá': ['Sofá'],
   'Espaldar':  ['Atlantis','Botones','Chocolatina','Trenzado','Roma','Cascada','Doble Tablero','Capitoneado','W','Especial / Bajo pedido'],
   'Combos':    ['Base Cama + Espaldar Atlantis','Base Cama + Espaldar Botones','Base Cama + Espaldar Chocolatina','Base Cama + Espaldar Trenzado','Base Cama + Espaldar Roma (patas 15cm)','Base Cama + Espaldar + Piecero Atlantis (líneas delgadas)','Base Cama + Espaldar + Piecero Roma (patas 15cm)','Base Cama + Espaldar + Piecero Trenzado','Base Cama + Espaldar + Piecero Chocolatina','Base Cama + Espaldar Botones + Colchón Verona','Base Cama + Espaldar + Piecero Cascada','Base Cama + Espaldar Cascada','Base Cama + Espaldar Doble Tablero','Base Cama + Espaldar Capitoneado','Base Cama + Espaldar + Piecero Capitoneado','Base Cama + Espaldar W','Base Cama + Espaldar + Piecero W','Base Cama Baúl + Espaldar Atlantis','Base Cama + Espaldar + Piecero Botones','Base Cama + Espaldar Deluxe + Piecero + Colchón','Combo bajo pedido'],
 };
@@ -778,11 +779,11 @@ function addProd(){
         <div class="field"><label class="lbl" style="color:#92400E">¿Incluir Herraje?</label>
           <select class="sel" id="her-${id}" onchange="onHer('${id}')">
             <option value="no">No incluir</option>
-            <option value="si">Sí — cobrar contraentrega ($30.000)</option>
+            <option value="si">Sí — cobrar contraentrega</option>
             <option value="pagado">Sí — ya pagado por cliente</option>
           </select></div>
-        <div class="field" id="herv-wrap-${id}" style="display:none;"><label class="lbl" style="color:#92400E">Costo ($)</label>
-          <input class="inp" type="text" id="herv-${id}" placeholder="$0" oninput="fmtPrc(this);calcTotal()"></div>
+        <div class="field" id="herv-wrap-${id}" style="display:none;"><label class="lbl" style="color:#92400E">Valor herraje ($)</label>
+          <input class="inp" type="text" id="herv-${id}" placeholder="Ej: $35.000" oninput="fmtPrc(this);calcTotal()"></div>
       </div>
     </div>
     <div style="background:#EDE9FE;border-radius:8px;padding:10px;margin-top:6px;">
@@ -850,7 +851,13 @@ function calcTotal(){
     const id = p.dataset.id;
     const qty = parseInt(gv('qty-'+id)||'1',10)||1;
     const prc = parsePrc(document.getElementById('prc-'+id));
-    sub += prc*qty; // anclaje NO se suma al total
+    sub += prc*qty;
+    // Herrajes valor libre
+    const herValCal = gv('her-'+id);
+    if(herValCal!=='no' && herValCal!=='pagado'){
+      const hervEl = document.getElementById('herv-'+id);
+      if(hervEl) sub += parsePrc(hervEl)*qty;
+    } // anclaje NO se suma al total
   });
   document.getElementById('t-sub').textContent = fmt(sub);
   document.getElementById('t-tot').textContent = fmt(sub);
@@ -867,7 +874,8 @@ function recogerItems(){
       categoria:cat, producto:prod, medida:gv('med-'+id), color:gv('col-'+id),
       cantidad:parseInt(gv('qty-'+id)||'1',10)||1,
       precio:parsePrc(document.getElementById('prc-'+id)),
-      herrajeIncluido:gv('her-'+id)!=='no', herrajePagado:gv('her-'+id)==='pagado', herrajeValor:(gv('her-'+id)!=='no'?30000:0),
+      herrajeIncluido:gv('her-'+id)!=='no', herrajePagado:gv('her-'+id)==='pagado',
+      herrajeValor:gv('her-'+id)!=='no'?parsePrc(document.getElementById('herv-'+id)):0,
       pataVal:gv('pat-'+id)||'no',
       pataLabel:(PATAS_OPTS.find(p=>p.val===(gv('pat-'+id)||'no'))||{label:''}).label,
       pataPrecio:(PATAS_OPTS.find(p=>p.val===(gv('pat-'+id)||'no'))||{precio:0}).precio,
@@ -1187,7 +1195,8 @@ function generarRemision(){
     else transp_row='<tr style="background:#D1FAE5;"><td colspan="4" style="padding:8px 12px;font-size:13px;color:#065F46;font-weight:700;">🚐 Transporte — Incluido (pagado)</td><td style="padding:8px 12px;text-align:right;font-size:14px;color:#065F46;"></td></tr>';
   }
   let anclaje_row='';
-  if(herrPend>0) anclaje_row+='<tr style="background:#FEF3C7;"><td colspan="4" style="padding:10px 12px;font-size:13px;color:#92400E;font-weight:700;">🔩 Herrajes — Saldo contraentrega</td><td style="padding:10px 12px;text-align:right;font-weight:800;font-size:15px;color:#92400E;">$30.000</td></tr>';
+  const totalHerrajesPend=(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).reduce(function(s,it){return s+(it.herrajeValor||0);},0);
+  if(herrPend>0) anclaje_row+='<tr style="background:#FEF3C7;"><td colspan="4" style="padding:10px 12px;font-size:13px;color:#92400E;font-weight:700;">🔩 Herrajes — Saldo contraentrega</td><td style="padding:10px 12px;text-align:right;font-weight:800;font-size:15px;color:#92400E;">'+fmt(totalHerrajesPend)+'</td></tr>';
   if(herrPag>0) anclaje_row+='<tr style="background:#F0FDF4;"><td colspan="4" style="padding:10px 12px;font-size:13px;color:#065F46;font-weight:700;">🔩 Herrajes incluidos — Pagados por cliente</td><td style="padding:10px 12px;text-align:right;font-weight:800;font-size:15px;color:#065F46;"></td></tr>';
   const anticipo_rows=p.anticipo>0
     ?'<tr style="background:#FEF3C7;"><td colspan="4" style="padding:8px 12px;font-size:12px;color:#92400E;">Anticipo recibido</td><td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:700;color:#92400E;">'+fmt(p.anticipo)+'</td></tr>'
@@ -2275,7 +2284,7 @@ function savePedido(ss, data) {
     sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,"","","","","","No","","",data.total,data.obs||""]);
   } else {
     items.forEach(function(it){
-      var herrajes = it.herrajeIncluido ? (it.herrajePagado ? "Incluido - Pagado" : "Si - $30.000 CE") : "No";
+      var herrajes = it.herrajeIncluido ? (it.herrajePagado ? "Incluido - Pagado $"+(it.herrajeValor||0) : "Si - CE $"+(it.herrajeValor||0)) : "No";
       var patas = (it.pataVal&&it.pataVal!=="no") ? it.pataLabel+(it.pataPagado?" - Pagado":" - CE $"+it.pataPrecio) : "No";
       var transp = data.transpCosto>0 ? (data.transpPagado?"Pagado $"+data.transpCosto:"CE $"+data.transpCosto) : "";
       sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,patas,transp,data.total,data.obs||""]);
