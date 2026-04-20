@@ -825,6 +825,9 @@ function onCat(id){
 
 function onHer(id){
   const v = gv('her-'+id);
+  const wrap = document.getElementById('herv-wrap-'+id);
+  if(wrap) wrap.style.display = (v==='si'||v==='pagado') ? 'block' : 'none';
+  if(v==='no'){const herv=document.getElementById('herv-'+id);if(herv)herv.value='';}
   calcTotal();
 }
 
