@@ -669,7 +669,7 @@ const PRODS = {
   'Base Cama': ['Premium','Pata L madera','Pata Madera 15cm','Cuerotex','Nido','con Cajones','tipo Baúl','tipo Baúl + Herrajes Hidráulicos'],
   'Sofá': ['Sofá'],
   'Espaldar':  ['Atlantis','Botones','Chocolatina','Trenzado','Roma','Cascada','Doble Tablero','Capitoneado','W','Especial / Bajo pedido'],
-  'Combos':    ['Base Cama + Espaldar Atlantis','Base Cama + Espaldar Botones','Base Cama + Espaldar Chocolatina','Base Cama + Espaldar Trenzado','Base Cama + Espaldar Roma (patas 15cm)','Base Cama + Espaldar + Piecero Atlantis (líneas delgadas)','Base Cama + Espaldar + Piecero Roma (patas 15cm)','Base Cama + Espaldar + Piecero Trenzado','Base Cama + Espaldar + Piecero Chocolatina','Base Cama + Espaldar Botones + Colchón Verona','Base Cama + Espaldar + Piecero Cascada','Base Cama + Espaldar Cascada','Base Cama + Espaldar Doble Tablero','Base Cama + Espaldar Capitoneado','Base Cama + Espaldar + Piecero Capitoneado','Base Cama + Espaldar W','Base Cama + Espaldar + Piecero W','Base Cama Baúl + Espaldar Atlantis','Base Cama + Espaldar + Piecero Botones','Base Cama + Espaldar Deluxe + Piecero + Colchón','Combo bajo pedido'],
+  'Combos':    ['Base Cama + Espaldar Atlantis','Base Cama + Espaldar Botones','Base Cama + Espaldar Chocolatina','Base Cama + Espaldar Trenzado','Base Cama + Espaldar Roma (patas 15cm)','Base Cama + Espaldar + Piecero Atlantis (líneas delgadas)','Base Cama + Espaldar + Piecero Roma (patas 15cm)','Base Cama + Espaldar + Piecero Trenzado','Base Cama + Espaldar + Piecero Chocolatina','Base Cama + Espaldar Botones + Colchón Verona','Base Cama + Espaldar + Piecero Cascada','Base Cama + Espaldar Cascada','Base Cama + Espaldar Doble Tablero','Base Cama + Espaldar Capitoneado','Base Cama + Espaldar + Piecero Capitoneado','Base Cama + Espaldar W','Base Cama + Espaldar + Piecero W','Base Cama Baúl + Espaldar Atlantis','Base Cama + Espaldar + Piecero Botones','Base Cama + Espaldar Deluxe + Piecero + Colchón','Base Cama con Cajones + Espaldar Atlantis','Combo bajo pedido'],
 };
 const MEDIDAS = ['Sencillo (100x190)','Semi-doble (120x190)','Doble (140x190)','Queen (160x190)','King (200x200)','Especial / Bajo pedido'];
 const COLORES = ['Beige','Crudo','Gris Claro','Gris Oscuro','Negro','Café','Azul','Blanco','Personalizado / A pedido'];
@@ -1728,6 +1728,17 @@ function initCamion(){
   const cf=document.getElementById('cam-fecha');if(cf)cf.value=fechaHoy;
   const chd=document.getElementById('cam-hist-desde');if(chd)chd.value=fechaHoy;
   const chu=document.getElementById('cam-hist-hasta');if(chu)chu.value=fechaHoy;
+  const pdd=document.getElementById('pago-dia-fecha');if(pdd)pdd.value=fechaHoy;
+  // Set default quincenal dates
+  const hoy2=new Date();
+  const dia=hoy2.getDate();
+  const mes=hoy2.getMonth();
+  const anio=hoy2.getFullYear();
+  const desdeQ=dia<=15?new Date(anio,mes,1):new Date(anio,mes,16);
+  const hastaQ=dia<=15?new Date(anio,mes,15):new Date(anio,mes+1,0);
+  const fmtDate=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const ld=document.getElementById('liquid-desde');if(ld)ld.value=fmtDate(desdeQ);
+  const lu=document.getElementById('liquid-hasta');if(lu)lu.value=fmtDate(hastaQ);
   cargarListaRuta();cargarRegistroEntregas();renderCamion();
 }
 function cargarListaRuta(){
@@ -1761,7 +1772,7 @@ function cargarRegistroEntregas(){
   }
   el.innerHTML=activos.map(function(p){
     const prods=(p.items||[]).map(function(it){return it.producto;}).join(', ');
-    const herrajesPend=(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).length*30000;
+    const herrajesPend=(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).reduce(function(s,it){return s+(it.herrajeValor||0);},0);
     return '<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;">'
       +'<div style="font-weight:700;font-size:.88rem;">'+p.id+' — '+p.cliente+'</div>'
       +'<div style="font-size:.75rem;color:var(--muted);">📍 '+p.direccion+(p.apto?' Apto '+p.apto:'')+'</div>'
@@ -1797,6 +1808,127 @@ function marcarEntregaCamion(id, resultado){
   const aEl=document.getElementById('alerta-entrega');
   if(aEl){aEl.className='alert a-ok';aEl.textContent=(resultado==='entregado'?'✅ '+id+' marcado como Entregado':'📋 '+id+' marcado como No entregado');aEl.style.display='block';setTimeout(function(){aEl.style.display='none';},3000);}
   cargarListaRuta();cargarRegistroEntregas();
+}
+
+function registrarPagoDia(){
+  const fecha=document.getElementById('pago-dia-fecha')?.value||'';
+  const valorEl=document.getElementById('pago-dia-valor');
+  const valor=parsePrc(valorEl);
+  if(!fecha||!valor){alerta('pago-dia','⚠️ Ingresa fecha y valor','warn');return;}
+  const valeObs=document.getElementById('pago-dia-vale-obs')?.value||'';
+  const valeValorEl=document.getElementById('pago-dia-vale-valor');
+  const valeValor=parsePrc(valeValorEl)||0;
+  const pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]');
+  // Check if day already exists
+  const existIdx=pagos.findIndex(function(p){return p.fecha===fecha;});
+  const reg={fecha,valor,valeObs,valeValor,registrado:new Date().toLocaleString('es-CO')};
+  if(existIdx>=0)pagos[existIdx]=reg;else pagos.push(reg);
+  localStorage.setItem('gc_pagos_dia',JSON.stringify(pagos));
+  alerta('pago-dia','✅ Día '+fecha+' registrado — '+fmt(valor)+(valeValor>0?' · Vale: '+fmt(valeValor):''),'ok');
+  if(valorEl)valorEl.value='';
+  if(valeValorEl)valeValorEl.value='';
+  document.getElementById('pago-dia-vale-obs').value='';
+}
+
+function generarLiquidacion(){
+  const desde=document.getElementById('liquid-desde')?.value||'';
+  const hasta=document.getElementById('liquid-hasta')?.value||'';
+  if(!desde||!hasta){alerta('pago-dia','⚠️ Selecciona las fechas','warn');return;}
+  const pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]');
+  const lista=pagos.filter(function(p){return p.fecha>=desde&&p.fecha<=hasta;}).sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  const el=document.getElementById('liquid-result');if(!el)return;
+  if(!lista.length){el.innerHTML='<div class="alert a-info">No hay registros en ese período</div>';return;}
+  const totalValor=lista.reduce(function(s,p){return s+(p.valor||0);},0);
+  const totalVales=lista.reduce(function(s,p){return s+(p.valeValor||0);},0);
+  const neto=totalValor-totalVales;
+  const desdeF=new Date(desde+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  const hastaF=new Date(hasta+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  let filasDias=lista.map(function(p,i){
+    const fdp=new Date(p.fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'2-digit',month:'short'});
+    return '<tr style="background:'+(i%2===0?'#F9FAFB':'white')+';">'
+      +'<td style="padding:7px 10px;border-bottom:1px solid #E5E7EB;font-size:12px;">'+fdp+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:600;font-size:13px;">'+fmt(p.valor)+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid #E5E7EB;font-size:11px;color:#6B7280;">'+(p.valeObs||'—')+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid #E5E7EB;text-align:right;font-size:12px;color:#D97706;">'+(p.valeValor>0?fmt(p.valeValor):'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  el.innerHTML='<div style="border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-bottom:10px;">'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<thead><tr style="background:#111C2E;color:white;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:11px;">Fecha</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:11px;">Valor día</th>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:11px;">Vale</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:11px;">Valor vale</th>'
+    +'</tr></thead>'
+    +'<tbody>'+filasDias+'</tbody>'
+    +'<tfoot>'
+    +'<tr style="background:#F3F4F6;"><td colspan="3" style="padding:8px 10px;font-weight:700;font-size:12px;">Total días</td>'
+    +'<td style="padding:8px 10px;text-align:right;font-weight:700;">'+fmt(totalVales)+'</td></tr>'
+    +'</tfoot></table></div>'
+    +'<div style="background:#111C2E;border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+    +'<div style="display:flex;justify-content:space-between;color:white;margin-bottom:6px;font-size:.85rem;">'
+    +'<span>Total a pagar ('+lista.length+' días)</span><span style="font-weight:700;">'+fmt(totalValor)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;color:#FCA5A5;margin-bottom:8px;font-size:.85rem;">'
+    +'<span>Menos vales</span><span>— '+fmt(totalVales)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;border-top:1px solid #374151;padding-top:8px;">'
+    +'<span style="color:white;font-weight:700;">💵 NETO A PAGAR</span>'
+    +'<span style="color:#FCD34D;font-weight:800;font-size:1.2rem;">'+fmt(neto)+'</span></div></div>'
+    +'<button onclick="imprimirLiquidacion(\x27'+desde+'\x27,\x27'+hasta+'\x27)" class="btn btn-primary" style="width:100%;">🖨️ Imprimir / Guardar PDF</button>';
+}
+
+function imprimirLiquidacion(desde, hasta){
+  const pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]');
+  const lista=pagos.filter(function(p){return p.fecha>=desde&&p.fecha<=hasta;}).sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  if(!lista.length)return;
+  const totalValor=lista.reduce(function(s,p){return s+(p.valor||0);},0);
+  const totalVales=lista.reduce(function(s,p){return s+(p.valeValor||0);},0);
+  const neto=totalValor-totalVales;
+  const desdeF=new Date(desde+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  const hastaF=new Date(hasta+'T12:00:00').toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+  const filas=lista.map(function(p,i){
+    const fdp=new Date(p.fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long'});
+    return '<tr style="background:'+(i%2===0?'#F9FAFB':'white')+';">'
+      +'<td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;">'+fdp+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:700;font-size:14px;">'+fmt(p.valor)+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;font-size:12px;color:#6B7280;">'+(p.valeObs||'—')+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid #E5E7EB;text-align:right;font-size:13px;color:#D97706;">'+(p.valeValor>0?fmt(p.valeValor):'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  const win=window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Liquidación Conductor</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:28px 32px;max-width:720px;margin:0 auto;color:#111;font-size:13px;}table{width:100%;border-collapse:collapse;}@media print{button{display:none;}}</style>'
+    +'</head><body>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:3px solid #111C2E;margin-bottom:20px;">'
+    +'<img src="'+IMG+'" style="height:56px;object-fit:contain;" alt="Mueble Hogar">'
+    +'<div style="text-align:right;"><div style="font-size:10px;color:#6B7280;text-transform:uppercase;">Liquidación Quincenal — Conductor</div>'
+    +'<div style="font-weight:800;font-size:1rem;margin-top:2px;">'+desdeF+' — '+hastaF+'</div></div></div>'
+    +'<table style="margin-bottom:20px;"><thead><tr style="background:#111C2E;color:white;">'
+    +'<th style="padding:10px 12px;text-align:left;">Fecha</th>'
+    +'<th style="padding:10px 12px;text-align:right;width:120px;">Valor día</th>'
+    +'<th style="padding:10px 12px;text-align:left;">Vale</th>'
+    +'<th style="padding:10px 12px;text-align:right;width:120px;">Valor vale</th>'
+    +'</tr></thead><tbody>'+filas+'</tbody>'
+    +'<tfoot><tr style="background:#F9FAFB;">'
+    +'<td colspan="2" style="padding:10px 12px;font-weight:700;">Subtotales</td>'
+    +'<td style="padding:10px 12px;text-align:right;font-weight:700;">'+fmt(totalVales)+'</td>'
+    +'<td></td></tr></tfoot></table>'
+    +'<div style="background:#111C2E;border-radius:10px;padding:14px 18px;margin-bottom:28px;">'
+    +'<div style="display:flex;justify-content:space-between;color:white;margin-bottom:6px;">'
+    +'<span>Total a pagar ('+lista.length+' días)</span><span style="font-weight:700;">'+fmt(totalValor)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;color:#FCA5A5;margin-bottom:10px;">'
+    +'<span>Menos vales</span><span>— '+fmt(totalVales)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;border-top:1px solid #374151;padding-top:10px;">'
+    +'<span style="color:white;font-weight:700;font-size:1rem;">💵 NETO A PAGAR AL CONDUCTOR</span>'
+    +'<span style="color:#FCD34D;font-weight:800;font-size:1.4rem;">'+fmt(neto)+'</span></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:16px;padding-top:16px;border-top:1px solid #E5E7EB;">'
+    +'<div style="text-align:center;"><div style="border-top:1.5px solid #9CA3AF;margin-top:50px;"></div>'
+    +'<div style="font-size:10px;color:#6B7280;margin-top:5px;text-transform:uppercase;">Conductor — Firma y C.C.</div></div>'
+    +'<div style="text-align:center;"><div style="border-top:1.5px solid #9CA3AF;margin-top:50px;"></div>'
+    +'<div style="font-size:10px;color:#6B7280;margin-top:5px;text-transform:uppercase;">Responsable — Mueble Hogar</div></div>'
+    +'</div>'
+    +'<button onclick="window.print()" style="margin-top:20px;width:100%;padding:13px;cursor:pointer;font-size:1rem;background:#111C2E;color:white;border:none;border-radius:8px;font-weight:600;">🖨️ Imprimir / PDF</button>'
+    +'</body></html>');
+  win.document.close();
 }
 
 function verHistorialEntregas(){
@@ -1861,7 +1993,7 @@ function generarHojaRuta(){
   if(!seleccionados.length){alert('Selecciona al menos un pedido');return;}
   const pedidos=seleccionados.map(function(id){return STATE.pedidos.find(function(p){return p.id===id;});}).filter(Boolean);
   const fechaFmt=fecha?new Date(fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'';
-  const totalHerrajes=pedidos.reduce(function(s,p){return s+(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).length*30000;},0);
+  const totalHerrajes=pedidos.reduce(function(s,p){return s+(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).reduce(function(s2,it){return s2+(it.herrajeValor||0);},0);},0);
   const totalPatas=pedidos.reduce(function(s,p){return s+(p.items||[]).reduce(function(s2,it){return s2+(it.pataVal&&it.pataVal!=='no'&&it.pataPrecio>0&&!it.pataPagado?it.pataPrecio:0);},0);},0);
   const totalTransp=pedidos.reduce(function(s,p){return s+(!p.transpPagado&&p.transpCosto>0?p.transpCosto:0);},0);
   const filas=pedidos.map(function(p,i){
@@ -1873,9 +2005,10 @@ function generarHojaRuta(){
     const totalPatasPend=patasPend.reduce((s,it)=>s+(it.pataPrecio||0),0);
     const transpPend=(!p.transpPagado&&p.transpCosto>0)?p.transpCosto:0;
 
+    const herrajesPendVal=(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).reduce(function(s,it){return s+(it.herrajeValor||0);},0);
     let herrCol='—';
-    if(herrajesPend>0&&herrajesPag===0) herrCol='<strong style="color:#D97706;">$30.000<br>COBRAR</strong>';
-    else if(herrajesPend>0&&herrajesPag>0) herrCol='<strong style="color:#D97706;">$30.000 COBRAR</strong><br><span style="color:#10B981;font-size:10px;">('+herrajesPag+') YA PAGÓ</span>';
+    if(herrajesPendVal>0&&herrajesPag===0) herrCol='<strong style="color:#D97706;">'+fmt(herrajesPendVal)+'<br>COBRAR</strong>';
+    else if(herrajesPendVal>0&&herrajesPag>0) herrCol='<strong style="color:#D97706;">'+fmt(herrajesPendVal)+' COBRAR</strong><br><span style="color:#10B981;font-size:10px;">('+herrajesPag+') YA PAGÓ</span>';
     else if(herrajesPag>0) herrCol='<span style="color:#10B981;">✅ YA PAGÓ</span>';
 
     // Saldo a cobrar: patas + transporte (si aplica)
