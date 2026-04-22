@@ -455,39 +455,77 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
       </div>
     </div>
 
-    <!-- PAGO CONDUCTOR -->
-    <div class="card">
-      <div class="ch"><div class="ch-ico">💵</div><div class="ch-title">Registrar Pago al Conductor</div></div>
+    <!-- REGISTRO ENTREGAS -->
+    <div class="card" style="border-left:4px solid #10B981;">
+      <div class="ch"><div class="ch-ico">📦</div><div class="ch-title">Registro de Entregas del Día</div></div>
       <div class="cb">
-        <div id="alerta-cam" class="alert" style="display:none;"></div>
-        <div class="sgrid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;">
-          <div class="scard"><div class="slbl">Pendientes de pago</div><div class="sval amber" id="cam-pend">0</div></div>
-          <div class="scard"><div class="slbl">Total pendiente</div><div class="sval" id="cam-total" style="font-size:1rem;">$0</div></div>
-        </div>
-        <div class="r2">
-          <div class="field"><label class="lbl">Fecha <span class="req">*</span></label>
-            <input class="inp" type="date" id="cam-fecha"></div>
-          <div class="field"><label class="lbl">Conductor <span class="req">*</span></label>
-            <input class="inp" id="cam-conductor" placeholder="Nombre"></div>
-        </div>
-        <div class="r2">
-          <div class="field"><label class="lbl">Valor ($) <span class="req">*</span></label>
-            <input class="inp" type="text" id="cam-valor" placeholder="$0" oninput="fmtPrc(this)"></div>
-          <div class="field"><label class="lbl">Estado</label>
-            <select class="sel" id="cam-estado">
-              <option value="pendiente">⏳ Pendiente</option>
-              <option value="pagado">✅ Pagado</option>
-            </select></div>
-        </div>
-        <div class="field"><label class="lbl">Observaciones</label>
-          <textarea class="ta" id="cam-obs" rows="2" placeholder="Acuerdos, notas..."></textarea></div>
-        <button class="btn btn-primary" onclick="guardarEntregaCamion()" style="width:100%;">💾 Guardar pago</button>
+        <p style="font-size:.82rem;color:var(--ink2);margin-bottom:10px;">Marca cada entrega. Los entregados desaparecen de la lista de selección.</p>
+        <div id="entrega-lista"></div>
+        <div id="alerta-entrega" class="alert" style="display:none;margin-top:8px;"></div>
       </div>
     </div>
 
-    <!-- HISTORIAL PAGOS -->
+    <!-- PAGO DEL DÍA -->
+    <div class="card" style="border-left:4px solid #D97706;">
+      <div class="ch"><div class="ch-ico">💵</div><div class="ch-title">Registrar Pago del Día</div></div>
+      <div class="cb">
+        <div class="r2" style="margin-bottom:8px;">
+          <div class="field"><label class="lbl">Fecha</label>
+            <input class="inp" type="date" id="pago-dia-fecha"></div>
+          <div class="field"><label class="lbl">Valor a pagar ($)</label>
+            <input class="inp" type="text" id="pago-dia-valor" placeholder="$0" oninput="fmtPrc(this)"></div>
+        </div>
+        <div class="field" style="margin-bottom:8px;"><label class="lbl">Vale del día — Observación</label>
+          <input class="inp" type="text" id="pago-dia-vale-obs" placeholder="Ej: gasolina, parqueadero..."></div>
+        <div class="field" style="margin-bottom:10px;"><label class="lbl">Valor del vale ($)</label>
+          <input class="inp" type="text" id="pago-dia-vale-valor" placeholder="$0 (dejar vacío si no hay vale)" oninput="fmtPrc(this)"></div>
+        <button class="btn btn-primary" onclick="registrarPagoDia()" style="width:100%;">💾 Registrar día</button>
+        <button class="btn btn-outline" onclick="verRegistrosDias()" style="width:100%;margin-top:6px;font-size:.8rem;">📋 Ver / borrar registros</button>
+        <div id="alerta-pago-dia" class="alert" style="display:none;margin-top:8px;"></div>
+        <div id="lista-registros-dias" style="display:none;margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- LIQUIDACIÓN QUINCENAL -->
+    <div class="card" style="border-left:4px solid #6D28D9;">
+      <div class="ch"><div class="ch-ico">📋</div><div class="ch-title">Liquidación Quincenal</div></div>
+      <div class="cb">
+        <div class="r2" style="margin-bottom:10px;">
+          <div class="field"><label class="lbl">Desde</label>
+            <input class="inp" type="date" id="liquid-desde"></div>
+          <div class="field"><label class="lbl">Hasta</label>
+            <input class="inp" type="date" id="liquid-hasta"></div>
+        </div>
+        <button class="btn btn-primary" onclick="generarLiquidacion()" style="width:100%;margin-bottom:8px;">📊 Ver liquidación</button>
+        <div id="liquid-result" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- HISTORIAL ENTREGAS -->
     <div class="card">
-      <div class="ch"><div class="ch-ico">📜</div><div class="ch-title">Historial de Pagos al Conductor</div></div>
+      <div class="ch"><div class="ch-ico">📅</div><div class="ch-title">Historial de Entregas</div></div>
+      <div class="cb">
+        <div class="r2" style="margin-bottom:10px;">
+          <div class="field"><label class="lbl">Desde</label>
+            <input class="inp" type="date" id="cam-hist-desde"></div>
+          <div class="field"><label class="lbl">Hasta</label>
+            <input class="inp" type="date" id="cam-hist-hasta"></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <select class="sel" id="cam-hist-estado" style="flex:1;">
+            <option value="">Todos los estados</option>
+            <option value="entregado">Entregados</option>
+            <option value="no_entregado">No entregados</option>
+          </select>
+          <button class="btn btn-primary" onclick="verHistorialEntregas()" style="flex:1;">📊 Ver</button>
+        </div>
+        <div id="cam-hist-result" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- PAGOS CONDUCTOR -->
+    <div class="card">
+      <div class="ch"><div class="ch-ico">💰</div><div class="ch-title">Historial de Pagos al Conductor</div></div>
       <div class="cb">
         <select class="sel" id="cam-fil" onchange="renderCamion()" style="margin-bottom:10px;">
           <option value="">Todos</option>
@@ -1808,6 +1846,36 @@ function marcarEntregaCamion(id, resultado){
   const aEl=document.getElementById('alerta-entrega');
   if(aEl){aEl.className='alert a-ok';aEl.textContent=(resultado==='entregado'?'✅ '+id+' marcado como Entregado':'📋 '+id+' marcado como No entregado');aEl.style.display='block';setTimeout(function(){aEl.style.display='none';},3000);}
   cargarListaRuta();cargarRegistroEntregas();
+}
+
+function verRegistrosDias(){
+  const el=document.getElementById('lista-registros-dias');
+  if(!el)return;
+  if(el.style.display==='block'){el.style.display='none';return;}
+  const pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]').sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  if(!pagos.length){el.innerHTML='<div class="alert a-info">No hay registros guardados</div>';el.style.display='block';return;}
+  el.innerHTML=pagos.map(function(p,i){
+    const fdp=new Date(p.fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;background:'+(i%2===0?'#F9FAFB':'white')+';">'
+      +'<div>'
+      +'<div style="font-weight:600;font-size:.85rem;">'+fdp+'</div>'
+      +'<div style="font-size:.75rem;color:var(--muted);">Valor: '+fmt(p.valor)+(p.valeValor>0?' · Vale: '+fmt(p.valeValor)+(p.valeObs?' ('+p.valeObs+')':''):'')+'</div>'
+      +'</div>'
+      +'<button onclick="borrarRegistroDia(\x27'+p.fecha+'\x27)" style="padding:5px 10px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:6px;font-size:.75rem;cursor:pointer;font-family:inherit;">🗑️ Borrar</button>'
+      +'</div>';
+  }).join('');
+  el.style.display='block';
+}
+
+function borrarRegistroDia(fecha){
+  if(!confirm('¿Borrar el registro del día '+fecha+'?'))return;
+  let pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]');
+  pagos=pagos.filter(function(p){return p.fecha!==fecha;});
+  localStorage.setItem('gc_pagos_dia',JSON.stringify(pagos));
+  verRegistrosDias();
+  // Refresh liquidacion if visible
+  const lr=document.getElementById('liquid-result');
+  if(lr&&lr.innerHTML) generarLiquidacion();
 }
 
 function registrarPagoDia(){
