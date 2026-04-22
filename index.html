@@ -2171,12 +2171,20 @@ function renderCamion(){
       +'<div style="color:var(--muted);font-size:.8rem;">📅 '+fd(e.fecha)+'</div>'
       +'<div style="font-weight:700;color:var(--amber);margin-top:4px;">'+fmt(e.valor)+'</div>'
       +(e.obs?'<div style="font-size:.78rem;color:var(--ink2);margin-top:4px;background:#F9FAFB;border-radius:5px;padding:4px 8px;">📝 '+e.obs+'</div>':'')
-      +'<div style="margin-top:8px;">'
-      +'<select onchange="cambiarEstadoCamion(\x27'+e.id+'\x27,this.value)" style="padding:5px 8px;border:1.5px solid var(--line);border-radius:7px;font-size:.78rem;font-family:inherit;background:white;">'
+      +'<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">'
+      +'<select onchange="cambiarEstadoCamion(\x27'+e.id+'\x27,this.value)" style="flex:1;padding:5px 8px;border:1.5px solid var(--line);border-radius:7px;font-size:.78rem;font-family:inherit;background:white;">'
       +'<option value="pendiente"'+(e.estado==='pendiente'?' selected':'')+'>⏳ Pendiente</option>'
       +'<option value="pagado"'+(e.estado==='pagado'?' selected':'')+'>✅ Pagado</option>'
-      +'</select></div></div>';
+      +'</select>'
+      +'<button onclick="borrarPagoConductor(\x27'+e.id+'\x27)" style="padding:5px 10px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:7px;font-size:.78rem;cursor:pointer;font-family:inherit;">🗑️</button>'
+      +'</div></div>';
   }).join('');
+}
+function borrarPagoConductor(id){
+  if(!confirm('¿Borrar este registro?'))return;
+  const entregas=JSON.parse(localStorage.getItem('gc_camion')||'[]');
+  localStorage.setItem('gc_camion',JSON.stringify(entregas.filter(function(e){return e.id!==id;})));
+  renderCamion();
 }
 function cambiarEstadoCamion(id,estado){
   const entregas=JSON.parse(localStorage.getItem('gc_camion')||'[]');
