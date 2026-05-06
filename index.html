@@ -1442,7 +1442,10 @@ function separarCombo(idx){
   let html2='<div style="font-size:.72rem;background:#DBEAFE;color:#1E40AF;padding:2px 6px;border-radius:4px;margin-bottom:6px;display:inline-block;">✂️ Separado — '+prod+'</div>';
 
   // BASE + PIECERO (siempre juntos)
-  const baseLabel2=hasPiecero?base+(hasPiecero?' + '+pieceroNombre:''):base;
+  // Detect si es base premium o con patas 15cm desde el nombre del combo
+  const esRoma=prod.toLowerCase().includes('roma');
+  const baseFinal=esRoma?'Base Cama (patas 15cm)':(hasDeluxe?'Base Cama Deluxe':'Base Cama Premium');
+  const baseLabel2=hasPiecero?baseFinal+' + '+pieceroNombre:baseFinal;
   html2+='<div style="border:1px solid #DBEAFE;border-radius:6px;padding:8px;margin-bottom:6px;">'
     +'<div style="font-size:.75rem;font-weight:700;color:#1E40AF;margin-bottom:4px;">🛏️ '+baseLabel2+' · '+row.medida+' · '+row.color+'</div>'
     +'<select id="prov-row-'+idx+'-base" class="sel" style="font-size:.82rem;margin-bottom:4px;">'+provOpts+'</select>'
@@ -1487,7 +1490,8 @@ function generarPDFcorte(){
       // Handle split combo - each part gets its OWN description only
       const partsPDF=[
         {suffix:'base', getLabel:function(r){
-          var b=r.producto.toLowerCase().includes('deluxe')?'Base Cama Deluxe':'Base Cama';
+          var esR=r.producto.toLowerCase().includes('roma');
+          var b=esR?'Base Cama (patas 15cm)':(r.producto.toLowerCase().includes('deluxe')?'Base Cama Deluxe':'Base Cama Premium');
           var hasPie=r.producto.toLowerCase().includes('piecero');
           var mPie=r.producto.match(/Piecero\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
           return hasPie?b+' + '+(mPie?'Piecero '+mPie[1]:'Piecero'):b;
@@ -1502,7 +1506,7 @@ function generarPDFcorte(){
         if(!grupos[prov2])grupos[prov2]=[];
         const cons2=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
         const label2=pt.getLabel(row);
-        grupos[prov2].push({categoria:'Combos',producto:label2,medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:cons2?.value||''});
+        grupos[prov2].push({categoria:'',producto:label2,medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:cons2?.value||''});
       });
       return;
     }
@@ -1639,7 +1643,8 @@ function crearOCsDesdeCorte(){
     if(splitEl2&&splitEl2.value==='1'){
       const partsOC=[
         {suffix:'base', getLabel:function(r){
-          var b=r.producto.toLowerCase().includes('deluxe')?'Base Cama Deluxe':'Base Cama';
+          var esR=r.producto.toLowerCase().includes('roma');
+          var b=esR?'Base Cama (patas 15cm)':(r.producto.toLowerCase().includes('deluxe')?'Base Cama Deluxe':'Base Cama Premium');
           var hasPie=r.producto.toLowerCase().includes('piecero');
           var mPie=r.producto.match(/Piecero\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
           return hasPie?b+' + '+(mPie?'Piecero '+mPie[1]:'Piecero'):b;
