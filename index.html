@@ -1416,46 +1416,57 @@ function generarCorte(){
 function separarCombo(idx){
   const row=_corteRows[idx];if(!row)return;
   const prod=row.producto||'';
-  // Detect base and espaldar from combo name
-  let base='Base Cama', espaldar='Espaldar';
-  // Extract espaldar name from combo
-  const matchEsp=prod.match(/Espaldar\s+(\w+)/i);
-  if(matchEsp) espaldar='Espaldar '+matchEsp[1];
-  // Check if has piecero
+  // Detect parts from combo name
+  let base='Base Cama';
+  // Extract espaldar name
+  const matchEsp=prod.match(/Espaldar\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
+  const espaldar=matchEsp?'Espaldar '+matchEsp[1]:'Espaldar';
+  // Check piecero
   const hasPiecero=prod.toLowerCase().includes('piecero');
-  const pieceroNombre=hasPiecero?prod.match(/Piecero\s+(\w+)/i)?'Piecero '+prod.match(/Piecero\s+(\w+)/i)[1]:'Piecero':'';
+  const matchPie=prod.match(/Piecero\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
+  const pieceroNombre=hasPiecero?(matchPie?'Piecero '+matchPie[1]:'Piecero'):'';
+  // Check colchon
+  const hasColchon=prod.toLowerCase().includes('colch');
+  const matchCol=prod.match(/Colch[oó]n\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
+  const colchonNombre=hasColchon?(matchCol?'Colchón '+matchCol[1]:'Colchón'):'';
+  // Check Deluxe (base especial)
+  const hasDeluxe=prod.toLowerCase().includes('deluxe');
+  if(hasDeluxe) base='Base Cama Deluxe';
 
-  // Build extra rows
   const provOpts=['','Fernando','Alejandro','Amanda','Ramguiflex','Carlos','Nicolás'].map(function(pv){
     return '<option value="'+pv+'">'+(pv||'— Proveedor —')+'</option>';
   }).join('');
 
   const rowEl=document.getElementById('corte-row-'+idx);if(!rowEl)return;
 
-  // Replace single row with split rows
-  rowEl.innerHTML=''
-    +'<div style="font-size:.72rem;background:#DBEAFE;color:#1E40AF;padding:2px 6px;border-radius:4px;margin-bottom:6px;display:inline-block;">✂️ Separado — '+prod+'</div>'
-    // BASE
-    +'<div style="border:1px solid #DBEAFE;border-radius:6px;padding:8px;margin-bottom:6px;">'
-    +'<div style="font-size:.75rem;font-weight:700;color:#1E40AF;margin-bottom:4px;">🛏️ '+base+' · '+row.medida+' · '+row.color+'</div>'
-    +'<select id="prov-row-'+idx+'-base" class="sel" style="font-size:.82rem;margin-bottom:4px;" onchange="onProvRowSplit('+idx+',\x27base\x27)">'
-    +provOpts+'</select>'
-    +'<input type="text" id="cons-row-'+idx+'-base" class="inp" placeholder="Consecutivo" style="font-size:.82rem;"></div>'
-    // ESPALDAR
-    +'<div style="border:1px solid #FEE2E2;border-radius:6px;padding:8px;margin-bottom:'+(hasPiecero?'6px':'0')+';">'
+  let html2='<div style="font-size:.72rem;background:#DBEAFE;color:#1E40AF;padding:2px 6px;border-radius:4px;margin-bottom:6px;display:inline-block;">✂️ Separado — '+prod+'</div>';
+
+  // BASE + PIECERO (siempre juntos)
+  const baseLabel2=hasPiecero?base+(hasPiecero?' + '+pieceroNombre:''):base;
+  html2+='<div style="border:1px solid #DBEAFE;border-radius:6px;padding:8px;margin-bottom:6px;">'
+    +'<div style="font-size:.75rem;font-weight:700;color:#1E40AF;margin-bottom:4px;">🛏️ '+baseLabel2+' · '+row.medida+' · '+row.color+'</div>'
+    +'<select id="prov-row-'+idx+'-base" class="sel" style="font-size:.82rem;margin-bottom:4px;">'+provOpts+'</select>'
+    +'<input type="text" id="cons-row-'+idx+'-base" class="inp" placeholder="Consecutivo" style="font-size:.82rem;">'
+    +'</div>';
+
+  // ESPALDAR
+  html2+='<div style="border:1px solid #FEE2E2;border-radius:6px;padding:8px;margin-bottom:6px;">'
     +'<div style="font-size:.75rem;font-weight:700;color:#991B1B;margin-bottom:4px;">🪑 '+espaldar+' · '+row.medida+' · '+row.color+'</div>'
-    +'<select id="prov-row-'+idx+'-esp" class="sel" style="font-size:.82rem;margin-bottom:4px;" onchange="onProvRowSplit('+idx+',\x27esp\x27)">'
-    +provOpts+'</select>'
-    +'<input type="text" id="cons-row-'+idx+'-esp" class="inp" placeholder="Consecutivo" style="font-size:.82rem;"></div>'
-    // PIECERO (if exists)
-    +(hasPiecero
-      ?'<div style="border:1px solid #D1FAE5;border-radius:6px;padding:8px;">'
-      +'<div style="font-size:.75rem;font-weight:700;color:#065F46;margin-bottom:4px;">📐 '+pieceroNombre+' · '+row.medida+' · '+row.color+'</div>'
-      +'<select id="prov-row-'+idx+'-pie" class="sel" style="font-size:.82rem;margin-bottom:4px;" onchange="onProvRowSplit('+idx+',\x27pie\x27)">'
-      +provOpts+'</select>'
-      +'<input type="text" id="cons-row-'+idx+'-pie" class="inp" placeholder="Consecutivo" style="font-size:.82rem;"></div>'
-      :'')
-    +'<input type="hidden" id="split-marker-'+idx+'" value="1">';
+    +'<select id="prov-row-'+idx+'-esp" class="sel" style="font-size:.82rem;margin-bottom:4px;">'+provOpts+'</select>'
+    +'<input type="text" id="cons-row-'+idx+'-esp" class="inp" placeholder="Consecutivo" style="font-size:.82rem;">'
+    +'</div>';
+
+  // COLCHÓN (separado si aplica)
+  if(hasColchon){
+    html2+='<div style="border:1px solid #EDE9FE;border-radius:6px;padding:8px;margin-bottom:6px;">'
+      +'<div style="font-size:.75rem;font-weight:700;color:#6D28D9;margin-bottom:4px;">🌙 '+colchonNombre+' · '+row.medida+' · '+row.color+'</div>'
+      +'<select id="prov-row-'+idx+'-col" class="sel" style="font-size:.82rem;margin-bottom:4px;">'+provOpts+'</select>'
+      +'<input type="text" id="cons-row-'+idx+'-col" class="inp" placeholder="Consecutivo" style="font-size:.82rem;">'
+      +'</div>';
+  }
+
+  html2+='<input type="hidden" id="split-marker-'+idx+'" value="1">';
+  rowEl.innerHTML=html2;
   rowEl.dataset.split='1';
 }
 
@@ -1473,19 +1484,25 @@ function generarPDFcorte(){
   (_corteRows||[]).forEach(function(row,idx){
     const splitEl=document.getElementById('split-marker-'+idx);
     if(splitEl&&splitEl.value==='1'){
-      // Handle split combo - add each part separately
-      const parts=[
-        {suffix:'base',label:'Base Cama'},
-        {suffix:'esp', label:'Espaldar'},
-        {suffix:'pie', label:'Piecero'}
+      // Handle split combo - each part gets its OWN description only
+      const partsPDF=[
+        {suffix:'base', getLabel:function(r){
+          var b=r.producto.toLowerCase().includes('deluxe')?'Base Cama Deluxe':'Base Cama';
+          var hasPie=r.producto.toLowerCase().includes('piecero');
+          var mPie=r.producto.match(/Piecero\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
+          return hasPie?b+' + '+(mPie?'Piecero '+mPie[1]:'Piecero'):b;
+        }},
+        {suffix:'esp',  getLabel:function(r){var m=r.producto.match(/Espaldar\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);return m?'Espaldar '+m[1]:'Espaldar';}},
+        {suffix:'col',  getLabel:function(r){var m=r.producto.match(/Colch[oó]n\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);return m?'Colchón '+m[1]:'Colchón';}}
       ];
-      parts.forEach(function(pt){
+      partsPDF.forEach(function(pt){
         const provEl2=document.getElementById('prov-row-'+idx+'-'+pt.suffix);
         if(!provEl2||!provEl2.value)return;
         const prov2=provEl2.value;
         if(!grupos[prov2])grupos[prov2]=[];
         const cons2=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
-        grupos[prov2].push({categoria:row.categoria||'',producto:pt.label+' (de '+row.producto+')',medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:cons2?.value||''});
+        const label2=pt.getLabel(row);
+        grupos[prov2].push({categoria:'Combos',producto:label2,medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:cons2?.value||''});
       });
       return;
     }
@@ -1620,15 +1637,25 @@ function crearOCsDesdeCorte(){
   (_corteRows||[]).forEach(function(row,idx){
     const splitEl2=document.getElementById('split-marker-'+idx);
     if(splitEl2&&splitEl2.value==='1'){
-      const parts3=[{suffix:'base',label:'Base Cama'},{suffix:'esp',label:'Espaldar'},{suffix:'pie',label:'Piecero'}];
-      parts3.forEach(function(pt){
+      const partsOC=[
+        {suffix:'base', getLabel:function(r){
+          var b=r.producto.toLowerCase().includes('deluxe')?'Base Cama Deluxe':'Base Cama';
+          var hasPie=r.producto.toLowerCase().includes('piecero');
+          var mPie=r.producto.match(/Piecero\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);
+          return hasPie?b+' + '+(mPie?'Piecero '+mPie[1]:'Piecero'):b;
+        }},
+        {suffix:'esp',  getLabel:function(r){var m=r.producto.match(/Espaldar\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);return m?'Espaldar '+m[1]:'Espaldar';}},
+        {suffix:'col',  getLabel:function(r){var m=r.producto.match(/Colch[oó]n\s+([\wáéíóúÁÉÍÓÚñÑ]+)/i);return m?'Colchón '+m[1]:'Colchón';}}
+      ];
+      partsOC.forEach(function(pt){
         const provEl4=document.getElementById('prov-row-'+idx+'-'+pt.suffix);
         if(!provEl4||!provEl4.value)return;
         const prov4=provEl4.value;
         if(!grupos[prov4])grupos[prov4]=[];
         opIds.add(row.opId);
         const cons4=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
-        grupos[prov4].push({opId:row.opId||'',categoria:row.categoria||'',descripcion:pt.label+' (de '+row.producto+')',medida:row.medida||'',color:row.color||'',cantidad:row.cantidad||1,consecutivo:cons4?.value||''});
+        const label4=pt.getLabel(row);
+        grupos[prov4].push({opId:row.opId||'',categoria:'',descripcion:label4,medida:row.medida||'',color:row.color||'',cantidad:row.cantidad||1,consecutivo:cons4?.value||''});
       });
       return;
     }
@@ -2207,7 +2234,6 @@ function generarHojaRuta(){
     // Saldo a cobrar: patas + transporte (si aplica)
     const telaPend=(p.items||[]).filter(function(it){return it.telaVal&&it.telaVal!=='no'&&it.telaPrecio>0&&!it.telaPagado;}).reduce(function(s,it){return s+(it.telaPrecio||0);},0);
     let saldoCol='';
-    if(herrajesPendVal>0) saldoCol+='<div style="font-size:11px;">Herrajes: <strong style="color:#D97706;">'+fmt(herrajesPendVal)+'</strong></div>';
     if(totalPatasPend>0) saldoCol+='<div style="font-size:11px;">Patas: <strong style="color:#6D28D9;">'+fmt(totalPatasPend)+'</strong></div>';
     if(telaPend>0) saldoCol+='<div style="font-size:11px;">Tela: <strong style="color:#9D174D;">'+fmt(telaPend)+'</strong></div>';
     if(transpPend>0) saldoCol+='<div style="font-size:11px;">Transp: <strong style="color:#065F46;">'+fmt(transpPend)+'</strong></div>';
@@ -2648,7 +2674,7 @@ function doGet(e) {
             categoria:row[13]||"", producto:row[14]||"", medida:row[15]||"",
             color:row[16]||"", cantidad:Number(row[17])||1,
             herrajeIncluido:row[18]&&row[18]!=="No", herrajePagado:row[18]==="Incluido - Pagado",
-            herrajeValor:row[18]&&row[18]!=="No"?30000:0,
+            herrajeValor:(function(){var t=String(row[18]||"");var m=t.match(/\$([\d]+)/);return m?parseInt(m[1],10):0;})(),
             pataVal:row[19]&&row[19]!=="No"?row[19]:"no", pataLabel:row[19]||"", pataPrecio:0, pataPagado:false,
             precio:Number(row[21])||0
           });
