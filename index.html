@@ -337,6 +337,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
             <option value="Amanda">Amanda</option>
             <option value="Ramguiflex">Ramguiflex</option>
             <option value="Carlos">Carlos</option>
+            <option value="Nicolás">Nicolás</option>
           </select>
           <button class="btn btn-primary" onclick="generarCorte()" style="flex:1;">📊 Generar</button>
         </div>
@@ -380,6 +381,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
             <option value="Amanda">Amanda — Bases y Espaldares</option>
             <option value="Ramguiflex">Ramguiflex — Colchones</option>
             <option value="Carlos">Carlos — Colchones</option>
+            <option value="Nicolás">Nicolás — Bases y Espaldares</option>
           </select></div>
         <div id="prov-info" style="display:none;margin-bottom:12px;"></div>
         <div class="field"><label class="lbl">Responsable <span class="req">*</span></label>
@@ -1381,7 +1383,7 @@ function generarCorte(){
       }
       _corteRows.push({opId:p.id,categoria:it.categoria||'',producto:productoNota,medida:it.medida||'',color:it.color||'',cantidad:it.cantidad||1,pataVal:it.pataVal||'no',pataLabel:it.pataLabel||''});
       const opts='<option value=""'+(provSug===''?' selected':'')+'>— Seleccionar proveedor —</option>'
-        +['Fernando','Alejandro','Amanda','Ramguiflex','Carlos'].map(function(pv){
+        +['Fernando','Alejandro','Amanda','Ramguiflex','Carlos','Nicolás'].map(function(pv){
           return '<option value="'+pv+'"'+(pv===provSug?' selected':'')+'>'+pv+'</option>';
         }).join('');
       const esCombo=(it.categoria||'').toLowerCase()==='combos';
