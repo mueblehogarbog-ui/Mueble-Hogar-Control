@@ -1384,12 +1384,16 @@ function generarCorte(){
         +['Fernando','Alejandro','Amanda','Ramguiflex','Carlos'].map(function(pv){
           return '<option value="'+pv+'"'+(pv===provSug?' selected':'')+'>'+pv+'</option>';
         }).join('');
+      const esCombo=(it.categoria||'').toLowerCase()==='combos';
       html+='<div class="order-card" id="corte-row-'+rowIdx+'" style="margin-bottom:8px;">';
       html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
       html+='<div><span style="font-size:.7rem;background:#F3F4F6;color:#6B7280;padding:1px 5px;border-radius:3px;margin-right:4px;">'+(it.categoria||'')+'</span>';
       html+='<strong style="font-size:.95rem;">'+it.producto+'</strong>';
       html+='<div style="font-size:.78rem;color:var(--muted);margin-top:2px;">'+it.medida+' · '+it.color+' · x'+it.cantidad+'</div></div>';
-      html+='<span class="badge badge-warn" style="font-size:.65rem;white-space:nowrap;">'+p.id+'</span></div>';
+      html+='<div style="display:flex;gap:4px;align-items:center;">';
+      html+='<span class="badge badge-warn" style="font-size:.65rem;white-space:nowrap;">'+p.id+'</span>';
+      if(esCombo) html+='<button onclick="separarCombo('+rowIdx+')" style="padding:2px 7px;background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD;border-radius:5px;font-size:.65rem;cursor:pointer;font-family:inherit;white-space:nowrap;">✂️ Separar</button>';
+      html+='</div></div>';
       html+='<select id="prov-row-'+rowIdx+'" class="sel" style="font-size:.82rem;" onchange="onProvRow('+rowIdx+')">'+opts+'</select>';
       html+='<div id="cons-wrap-'+rowIdx+'" style="display:'+(provSug==='Fernando'?'block':'none')+';margin-top:8px;">';
       html+='<input type="text" id="cons-row-'+rowIdx+'" class="inp" placeholder="Consecutivo Fernando (ej: 248)" style="font-size:.82rem;"></div>';
@@ -1407,14 +1411,82 @@ function generarCorte(){
   }
   resultado.innerHTML=html;
 }
+function separarCombo(idx){
+  const row=_corteRows[idx];if(!row)return;
+  const prod=row.producto||'';
+  // Detect base and espaldar from combo name
+  let base='Base Cama', espaldar='Espaldar';
+  // Extract espaldar name from combo
+  const matchEsp=prod.match(/Espaldar\s+(\w+)/i);
+  if(matchEsp) espaldar='Espaldar '+matchEsp[1];
+  // Check if has piecero
+  const hasPiecero=prod.toLowerCase().includes('piecero');
+  const pieceroNombre=hasPiecero?prod.match(/Piecero\s+(\w+)/i)?'Piecero '+prod.match(/Piecero\s+(\w+)/i)[1]:'Piecero':'';
+
+  // Build extra rows
+  const provOpts=['','Fernando','Alejandro','Amanda','Ramguiflex','Carlos','Nicolás'].map(function(pv){
+    return '<option value="'+pv+'">'+(pv||'— Proveedor —')+'</option>';
+  }).join('');
+
+  const rowEl=document.getElementById('corte-row-'+idx);if(!rowEl)return;
+
+  // Replace single row with split rows
+  rowEl.innerHTML=''
+    +'<div style="font-size:.72rem;background:#DBEAFE;color:#1E40AF;padding:2px 6px;border-radius:4px;margin-bottom:6px;display:inline-block;">✂️ Separado — '+prod+'</div>'
+    // BASE
+    +'<div style="border:1px solid #DBEAFE;border-radius:6px;padding:8px;margin-bottom:6px;">'
+    +'<div style="font-size:.75rem;font-weight:700;color:#1E40AF;margin-bottom:4px;">🛏️ '+base+' · '+row.medida+' · '+row.color+'</div>'
+    +'<select id="prov-row-'+idx+'-base" class="sel" style="font-size:.82rem;margin-bottom:4px;" onchange="onProvRowSplit('+idx+',\x27base\x27)">'
+    +provOpts+'</select>'
+    +'<input type="text" id="cons-row-'+idx+'-base" class="inp" placeholder="Consecutivo" style="font-size:.82rem;"></div>'
+    // ESPALDAR
+    +'<div style="border:1px solid #FEE2E2;border-radius:6px;padding:8px;margin-bottom:'+(hasPiecero?'6px':'0')+';">'
+    +'<div style="font-size:.75rem;font-weight:700;color:#991B1B;margin-bottom:4px;">🪑 '+espaldar+' · '+row.medida+' · '+row.color+'</div>'
+    +'<select id="prov-row-'+idx+'-esp" class="sel" style="font-size:.82rem;margin-bottom:4px;" onchange="onProvRowSplit('+idx+',\x27esp\x27)">'
+    +provOpts+'</select>'
+    +'<input type="text" id="cons-row-'+idx+'-esp" class="inp" placeholder="Consecutivo" style="font-size:.82rem;"></div>'
+    // PIECERO (if exists)
+    +(hasPiecero
+      ?'<div style="border:1px solid #D1FAE5;border-radius:6px;padding:8px;">'
+      +'<div style="font-size:.75rem;font-weight:700;color:#065F46;margin-bottom:4px;">📐 '+pieceroNombre+' · '+row.medida+' · '+row.color+'</div>'
+      +'<select id="prov-row-'+idx+'-pie" class="sel" style="font-size:.82rem;margin-bottom:4px;" onchange="onProvRowSplit('+idx+',\x27pie\x27)">'
+      +provOpts+'</select>'
+      +'<input type="text" id="cons-row-'+idx+'-pie" class="inp" placeholder="Consecutivo" style="font-size:.82rem;"></div>'
+      :'')
+    +'<input type="hidden" id="split-marker-'+idx+'" value="1">';
+  rowEl.dataset.split='1';
+}
+
+function onProvRowSplit(idx, part){
+  // No need to show/hide anything, all have consecutivo
+}
+
 function onProvRow(idx){
   const prov=document.getElementById('prov-row-'+idx)?.value;
   const wrap=document.getElementById('cons-wrap-'+idx);
-  if(wrap)wrap.style.display=(prov==='Fernando'||prov==='Nicolás')?'block':'none';
+  if(wrap)wrap.style.display=prov?'block':'none';
 }
 function generarPDFcorte(){
   const grupos={};
   (_corteRows||[]).forEach(function(row,idx){
+    const splitEl=document.getElementById('split-marker-'+idx);
+    if(splitEl&&splitEl.value==='1'){
+      // Handle split combo - add each part separately
+      const parts=[
+        {suffix:'base',label:'Base Cama'},
+        {suffix:'esp', label:'Espaldar'},
+        {suffix:'pie', label:'Piecero'}
+      ];
+      parts.forEach(function(pt){
+        const provEl2=document.getElementById('prov-row-'+idx+'-'+pt.suffix);
+        if(!provEl2||!provEl2.value)return;
+        const prov2=provEl2.value;
+        if(!grupos[prov2])grupos[prov2]=[];
+        const cons2=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
+        grupos[prov2].push({categoria:row.categoria||'',producto:pt.label+' (de '+row.producto+')',medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:cons2?.value||''});
+      });
+      return;
+    }
     const provEl=document.getElementById('prov-row-'+idx);
     if(!provEl||!provEl.value)return;
     const prov=provEl.value;
@@ -1544,6 +1616,20 @@ function crearOCsDesdeCorte(){
   const grupos={};
   const opIds=new Set();
   (_corteRows||[]).forEach(function(row,idx){
+    const splitEl2=document.getElementById('split-marker-'+idx);
+    if(splitEl2&&splitEl2.value==='1'){
+      const parts3=[{suffix:'base',label:'Base Cama'},{suffix:'esp',label:'Espaldar'},{suffix:'pie',label:'Piecero'}];
+      parts3.forEach(function(pt){
+        const provEl4=document.getElementById('prov-row-'+idx+'-'+pt.suffix);
+        if(!provEl4||!provEl4.value)return;
+        const prov4=provEl4.value;
+        if(!grupos[prov4])grupos[prov4]=[];
+        opIds.add(row.opId);
+        const cons4=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
+        grupos[prov4].push({opId:row.opId||'',categoria:row.categoria||'',descripcion:pt.label+' (de '+row.producto+')',medida:row.medida||'',color:row.color||'',cantidad:row.cantidad||1,consecutivo:cons4?.value||''});
+      });
+      return;
+    }
     const provEl=document.getElementById('prov-row-'+idx);
     if(!provEl||!provEl.value)return;
     const prov=provEl.value;
