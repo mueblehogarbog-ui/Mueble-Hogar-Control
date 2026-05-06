@@ -436,26 +436,23 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
     <div class="card" style="border-left:4px solid var(--amber);">
       <div class="ch"><div class="ch-ico">🗺️</div><div class="ch-title">Hoja de Ruta del Día</div></div>
       <div class="cb">
-        <div class="r2">
-          <div class="field"><label class="lbl">Fecha de entrega</label>
+        <div class="r2" style="margin-bottom:10px;">
+          <div class="field"><label class="lbl">Fecha</label>
             <input class="inp" type="date" id="ruta-fecha"></div>
           <div class="field"><label class="lbl">Conductor</label>
-            <input class="inp" id="ruta-conductor" placeholder="Nombre del conductor"></div>
+            <input class="inp" type="text" id="ruta-conductor" placeholder="Nombre conductor"></div>
         </div>
-        <div style="font-weight:600;font-size:.85rem;margin-bottom:6px;">Selecciona los pedidos del día:</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;">
-          <input class="inp" id="ruta-buscar" type="text" placeholder="Buscar por OP, nombre o teléfono..." oninput="filtrarRuta()" style="flex:1;font-size:.82rem;">
+        <input class="inp" type="text" id="ruta-buscar" placeholder="🔍 Buscar por OP, nombre o teléfono..." oninput="filtrarRuta()" style="margin-bottom:10px;">
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <button class="btn btn-outline" onclick="selTodos()" style="flex:1;font-size:.8rem;">Sel. todos</button>
+          <button class="btn btn-outline" onclick="deselTodos()" style="flex:1;font-size:.8rem;">Desel. todos</button>
         </div>
-        <div id="ruta-lista" style="max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="btn btn-outline" onclick="selTodos()" style="flex:1;font-size:.8rem;">☑️ Todos</button>
-          <button class="btn btn-outline" onclick="deselTodos()" style="flex:1;font-size:.8rem;">☐ Ninguno</button>
-        </div>
-        <button class="btn btn-primary" onclick="generarHojaRuta()" style="width:100%;margin-top:8px;">🖨️ Generar Hoja de Ruta</button>
+        <div id="ruta-lista" style="max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;"></div>
+        <button class="btn btn-primary" onclick="generarHojaRuta()" style="width:100%;">🖨️ Generar hoja de ruta</button>
       </div>
     </div>
 
-    <!-- PAGO DEL DÍA -->
+    <!-- REGISTRO DEL DÍA -->
     <div class="card" style="border-left:4px solid #D97706;">
       <div class="ch"><div class="ch-ico">💵</div><div class="ch-title">Registrar Pago del Día</div></div>
       <div class="cb">
@@ -488,34 +485,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
           <div class="field"><label class="lbl">Hasta</label>
             <input class="inp" type="date" id="liquid-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="generarLiquidacion()" style="width:100%;margin-bottom:8px;">📊 Ver liquidación</button>
-        <div id="liquid-result" style="margin-top:10px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="btn btn-primary" onclick="generarLiquidacion()" style="flex:1;">📊 Ver liquidación</button>
+          <button class="btn btn-outline" onclick="verResumenDias()" style="flex:1;font-size:.82rem;">📋 Ver días</button>
+        </div>
+        <div id="resumen-dias-result" style="margin-bottom:8px;display:none;"></div>
+        <div id="liquid-result"></div>
       </div>
     </div>
 
-    <!-- HISTORIAL ENTREGAS -->
-    <div class="card">
-      <div class="ch"><div class="ch-ico">📅</div><div class="ch-title">Historial de Entregas</div></div>
-      <div class="cb">
-        <div class="r2" style="margin-bottom:10px;">
-          <div class="field"><label class="lbl">Desde</label>
-            <input class="inp" type="date" id="cam-hist-desde"></div>
-          <div class="field"><label class="lbl">Hasta</label>
-            <input class="inp" type="date" id="cam-hist-hasta"></div>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <select class="sel" id="cam-hist-estado" style="flex:1;">
-            <option value="">Todos los estados</option>
-            <option value="entregado">Entregados</option>
-            <option value="no_entregado">No entregados</option>
-          </select>
-          <button class="btn btn-primary" onclick="verHistorialEntregas()" style="flex:1;">📊 Ver</button>
-        </div>
-        <div id="cam-hist-result" style="margin-top:10px;"></div>
-      </div>
-    </div>
-
-    <!-- PAGOS CONDUCTOR -->
+    <!-- HISTORIAL DE PAGOS AL CONDUCTOR -->
     <div class="card">
       <div class="ch"><div class="ch-ico">💰</div><div class="ch-title">Historial de Pagos al Conductor</div></div>
       <div class="cb">
@@ -531,6 +510,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
         <div id="lista-registros-dias" style="display:none;margin-top:10px;"></div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -563,7 +543,11 @@ nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid
       <div class="ch"><div class="ch-ico">💾</div><div class="ch-title">Datos Locales</div></div>
       <div class="cb">
         <div style="font-size:.85rem;margin-bottom:12px;"><strong id="local-count">0</strong> pedidos &nbsp;|&nbsp; <strong id="local-oc-count">0</strong> órdenes de compra guardadas.</div>
-        <button class="btn btn-outline" onclick="exportarDatos()" style="width:100%;margin-bottom:8px;">📥 Exportar JSON</button>
+        <button class="btn btn-outline" onclick="exportarDatos()" style="width:100%;margin-bottom:8px;">📥 Exportar JSON (backup completo)</button>
+        <label class="btn btn-outline" style="width:100%;margin-bottom:8px;text-align:center;cursor:pointer;">
+          📤 Importar JSON (restaurar backup)
+          <input type="file" accept=".json" onchange="importarDatos(event)" style="display:none;">
+        </label>
         <button class="btn btn-primary" onclick="sincronizarDesdeSheets()" style="width:100%;margin-bottom:8px;">🔄 Sincronizar desde Sheets</button>
         <div id="sync-progress" style="display:none;background:#EDE9FE;border-radius:8px;padding:10px;margin-bottom:8px;font-size:.82rem;color:#6D28D9;"></div>
         <div style="display:flex;flex-direction:column;gap:8px;">
@@ -686,6 +670,7 @@ const PROVEEDORES = {
   'Amanda':     {tipo:'Bases y Espaldares', pago:'Crédito'},
   'Ramguiflex': {tipo:'Colchones',          pago:'Cruce'},
   'Carlos':     {tipo:'Colchones',          pago:'Por definir'},
+  'Nicolás':    {tipo:'Bases y Espaldares', pago:'Por definir'},
 };
 
 const PATAS_OPTS = [
@@ -700,10 +685,10 @@ const PATAS_OPTS = [
 
 const PRODS = {
   'Colchones': ['Vangoh','Verona','Mónaco','Biconfort','Montecarlo','Pillow','Premium'],
-  'Base Cama': ['Premium','Pata L madera','Pata Madera 15cm','Cuerotex','Nido','con Cajones','tipo Baúl','tipo Baúl + Herrajes Hidráulicos'],
+  'Base Cama': ['Premium','Pata L madera','Pata Madera 15cm','Cuerotex','Nido','con Cajones','con Cajones (completa)','tipo Baúl','tipo Baúl + Herrajes Hidráulicos'],
   'Sofá': ['Sofá'],
   'Espaldar':  ['Atlantis','Botones','Chocolatina','Trenzado','Roma','Cascada','Doble Tablero','Capitoneado','W','Especial / Bajo pedido'],
-  'Combos':    ['Base Cama + Espaldar Atlantis','Base Cama + Espaldar Botones','Base Cama + Espaldar Chocolatina','Base Cama + Espaldar Trenzado','Base Cama + Espaldar Roma (patas 15cm)','Base Cama + Espaldar + Piecero Atlantis (líneas delgadas)','Base Cama + Espaldar + Piecero Roma (patas 15cm)','Base Cama + Espaldar + Piecero Trenzado','Base Cama + Espaldar + Piecero Chocolatina','Base Cama + Espaldar Botones + Colchón Verona','Base Cama + Espaldar + Piecero Cascada','Base Cama + Espaldar Cascada','Base Cama + Espaldar Doble Tablero','Base Cama + Espaldar Capitoneado','Base Cama + Espaldar + Piecero Capitoneado','Base Cama + Espaldar W','Base Cama + Espaldar + Piecero W','Base Cama Baúl + Espaldar Atlantis','Base Cama + Espaldar + Piecero Botones','Base Cama + Espaldar Deluxe + Piecero + Colchón','Base Cama con Cajones + Espaldar Atlantis','Combo bajo pedido'],
+  'Combos':    ['Base Cama + Espaldar Atlantis','Base Cama + Espaldar Botones','Base Cama + Espaldar Chocolatina','Base Cama + Espaldar Trenzado','Base Cama + Espaldar Roma (patas 15cm)','Base Cama + Espaldar + Piecero Atlantis (líneas delgadas)','Base Cama + Espaldar + Piecero Roma (patas 15cm)','Base Cama + Espaldar + Piecero Trenzado','Base Cama + Espaldar + Piecero Chocolatina','Base Cama + Espaldar Botones + Colchón Verona','Base Cama + Espaldar + Piecero Cascada','Base Cama + Espaldar Cascada','Base Cama + Espaldar Doble Tablero','Base Cama + Espaldar Capitoneado','Base Cama + Espaldar + Piecero Capitoneado','Base Cama + Espaldar W','Base Cama + Espaldar + Piecero W','Base Cama Baúl + Espaldar Atlantis','Base Cama + Espaldar + Piecero Botones','Base Cama + Espaldar Deluxe + Piecero + Colchón','Base Cama con Cajones + Espaldar Atlantis','Base Cama con Cajones + Espaldar Atlantis + Piecero (líneas delgadas)','Base Cama + Espaldar Botones + Colchón Pillow','Combo bajo pedido'],
 };
 const MEDIDAS = ['Sencillo (100x190)','Semi-doble (120x190)','Doble (140x190)','Queen (160x190)','King (200x200)','Especial / Bajo pedido'];
 const COLORES = ['Beige','Crudo','Gris Claro','Gris Oscuro','Negro','Café','Azul','Blanco','Personalizado / A pedido'];
@@ -837,6 +822,17 @@ function addProd(){
           <option value="pagado">Ya pagado por cliente</option>
         </select>
       </div>
+    </div>
+    <div style="background:#FDF2F8;border-radius:8px;padding:10px;margin-top:6px;">
+      <div style="font-size:.8rem;font-weight:600;color:#9D174D;margin-bottom:6px;">🐾 Tela amigable con mascotas</div>
+      <select class="sel" id="tela-${id}" onchange="onTela('${id}')">
+        <option value="no">No incluir</option>
+        <option value="si">Sí — cobrar contraentrega</option>
+        <option value="pagado">Sí — ya pagado por cliente</option>
+      </select>
+      <div id="tela-val-wrap-${id}" style="display:none;margin-top:6px;">
+        <input class="inp" type="text" id="tela-val-${id}" placeholder="Valor tela ($)" oninput="fmtPrc(this);calcTotal()">
+      </div>
     </div>`;
   document.getElementById('lista-productos').appendChild(div);
 }
@@ -865,6 +861,13 @@ function onHer(id){
   calcTotal();
 }
 
+function onTela(id){
+  const v=gv('tela-'+id);
+  const wrap=document.getElementById('tela-val-wrap-'+id);
+  if(wrap)wrap.style.display=(v==='si'||v==='pagado')?'block':'none';
+  if(v==='no'){const el=document.getElementById('tela-val-'+id);if(el)el.value='';}
+  calcTotal();
+}
 function onPat(id){
   const v = gv('pat-'+id);
   const wrap = document.getElementById('pat-pago-wrap-'+id);
@@ -916,7 +919,10 @@ function recogerItems(){
       pataVal:gv('pat-'+id)||'no',
       pataLabel:(PATAS_OPTS.find(p=>p.val===(gv('pat-'+id)||'no'))||{label:''}).label,
       pataPrecio:(PATAS_OPTS.find(p=>p.val===(gv('pat-'+id)||'no'))||{precio:0}).precio,
-      pataPagado:gv('pat-pago-'+id)==='pagado'
+      pataPagado:gv('pat-pago-'+id)==='pagado',
+      telaVal:gv('tela-'+id)||'no',
+      telaPrecio:parsePrc(document.getElementById('tela-val-'+id)),
+      telaPagado:gv('tela-'+id)==='pagado'
     });
   });
   return items;
@@ -1404,7 +1410,7 @@ function generarCorte(){
 function onProvRow(idx){
   const prov=document.getElementById('prov-row-'+idx)?.value;
   const wrap=document.getElementById('cons-wrap-'+idx);
-  if(wrap)wrap.style.display=prov==='Fernando'?'block':'none';
+  if(wrap)wrap.style.display=(prov==='Fernando'||prov==='Nicolás')?'block':'none';
 }
 function generarPDFcorte(){
   const grupos={};
@@ -1847,7 +1853,7 @@ function marcarEntregaCamion(id, resultado){
 function verRegistrosDias(){
   const el=document.getElementById('lista-registros-dias');
   if(!el)return;
-  if(el.style.display==='block'){el.style.display='none';return;}
+  if(el.style.display==='block'&&el.dataset.loaded==='1'){el.style.display='none';el.dataset.loaded='0';return;}
   const pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]').sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
   if(!pagos.length){el.innerHTML='<div class="alert a-info">No hay registros guardados</div>';el.style.display='block';return;}
   el.innerHTML=pagos.map(function(p,i){
@@ -1862,7 +1868,7 @@ function verRegistrosDias(){
       +'<button onclick="borrarRegistroDia(\x27'+p.fecha+'\x27)" style="padding:5px 10px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:6px;font-size:.75rem;cursor:pointer;font-family:inherit;margin-left:8px;">🗑️</button>'
       +'</div></div>';
   }).join('');
-  el.style.display='block';
+  el.style.display='block';el.dataset.loaded='1';
 }
 
 function borrarRegistroDia(fecha){
@@ -1890,11 +1896,40 @@ function registrarPagoDia(){
   const reg={fecha,valor,obs,valeObs,valeValor,registrado:new Date().toLocaleString('es-CO')};
   if(existIdx>=0)pagos[existIdx]=reg;else pagos.push(reg);
   localStorage.setItem('gc_pagos_dia',JSON.stringify(pagos));
+  // Enviar a Sheets
+  enviarSheets({type:'conductor',fecha,valor,obs,valeValor,valeObs,registrado:new Date().toLocaleString('es-CO')});
   alerta('pago-dia','✅ Día '+fecha+' registrado — '+fmt(valor)+(valeValor>0?' · Vale: '+fmt(valeValor):''),'ok');
   if(valorEl)valorEl.value='';
   if(valeValorEl)valeValorEl.value='';
   const obsEl=document.getElementById('pago-dia-obs');if(obsEl)obsEl.value='';
   const valeObsEl=document.getElementById('pago-dia-vale-obs');if(valeObsEl)valeObsEl.value='';
+}
+
+function verResumenDias(){
+  const desde=document.getElementById('liquid-desde')?.value||'';
+  const hasta=document.getElementById('liquid-hasta')?.value||'';
+  const el=document.getElementById('resumen-dias-result');if(!el)return;
+  if(el.style.display==='block'&&el.dataset.loaded==='1'){el.style.display='none';el.dataset.loaded='0';return;}
+  const pagos=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]');
+  const lista=pagos.filter(function(p){return !desde||!hasta||(p.fecha>=desde&&p.fecha<=hasta);}).sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  if(!lista.length){el.innerHTML='<div class="alert a-info">No hay días registrados en ese período</div>';el.style.display='block';el.dataset.loaded='1';return;}
+  el.innerHTML='<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;">'
+    +lista.map(function(p,i){
+      const fdp=new Date(p.fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'2-digit',month:'short'});
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:'+(i%2===0?'#F9FAFB':'white')+';border-bottom:1px solid #E5E7EB;">'
+        +'<div>'
+        +'<div style="font-weight:600;font-size:.82rem;">'+fdp+'</div>'
+        +(p.obs?'<div style="font-size:.72rem;color:var(--muted);">'+p.obs+'</div>':'')
+        +(p.valeValor>0?'<div style="font-size:.72rem;color:#D97706;">Vale: '+fmt(p.valeValor)+(p.valeObs?' — '+p.valeObs:'')+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right;">'
+        +'<div style="font-weight:700;font-size:.9rem;">'+fmt(p.valor)+'</div>'
+        +(p.valeValor>0?'<div style="font-size:.72rem;color:#D97706;">-'+fmt(p.valeValor)+'</div>':'')
+        +'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+  el.style.display='block';el.dataset.loaded='1';
 }
 
 function generarLiquidacion(){
@@ -2082,8 +2117,11 @@ function generarHojaRuta(){
     else if(herrajesPag>0) herrCol='<span style="color:#10B981;">✅ YA PAGÓ</span>';
 
     // Saldo a cobrar: patas + transporte (si aplica)
+    const telaPend=(p.items||[]).filter(function(it){return it.telaVal&&it.telaVal!=='no'&&it.telaPrecio>0&&!it.telaPagado;}).reduce(function(s,it){return s+(it.telaPrecio||0);},0);
     let saldoCol='';
+    if(herrajesPendVal>0) saldoCol+='<div style="font-size:11px;">Herrajes: <strong style="color:#D97706;">'+fmt(herrajesPendVal)+'</strong></div>';
     if(totalPatasPend>0) saldoCol+='<div style="font-size:11px;">Patas: <strong style="color:#6D28D9;">'+fmt(totalPatasPend)+'</strong></div>';
+    if(telaPend>0) saldoCol+='<div style="font-size:11px;">Tela: <strong style="color:#9D174D;">'+fmt(telaPend)+'</strong></div>';
     if(transpPend>0) saldoCol+='<div style="font-size:11px;">Transp: <strong style="color:#065F46;">'+fmt(transpPend)+'</strong></div>';
     if(!saldoCol) saldoCol='—';
     return '<tr>'
@@ -2359,8 +2397,31 @@ function sincronizarDesdeSheets(){
     });
 }
 
+function importarDatos(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const d=JSON.parse(e.target.result);
+      if(d.pedidos){STATE.pedidos=d.pedidos;}
+      if(d.compras){STATE.compras=d.compras;}
+      if(d.pagos_dia){localStorage.setItem('gc_pagos_dia',JSON.stringify(d.pagos_dia));}
+      if(d.camion){localStorage.setItem('gc_camion',JSON.stringify(d.camion));}
+      guardar();actualizarDash();actualizarBadge();renderHist();renderOCList();initCfg();
+      alerta('cfg','✅ Backup restaurado: '+( d.pedidos?.length||0)+' pedidos, '+(d.compras?.length||0)+' OCs, '+(d.pagos_dia?.length||0)+' días conductor','ok');
+    }catch(err){alerta('cfg','❌ Error al importar: '+err.message,'err');}
+  };
+  reader.readAsText(file);
+}
+
 function exportarDatos(){
-  const d={pedidos:STATE.pedidos,compras:STATE.compras,exportado:new Date().toISOString()};
+  const d={
+    pedidos:STATE.pedidos,
+    compras:STATE.compras,
+    pagos_dia:JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]'),
+    camion:JSON.parse(localStorage.getItem('gc_camion')||'[]'),
+    exportado:new Date().toISOString()
+  };
   const a=document.createElement('a');
   a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(d,null,2));
   a.download='mueblehogar-backup-'+new Date().toISOString().split('T')[0]+'.json';
@@ -2430,6 +2491,7 @@ function getScriptCode(){
     if (data.type === "pedido") savePedido(ss, data);
     else if (data.type === "compra") saveCompra(ss, data);
     else if (data.type === "upd") updateEstado(ss, data);
+    else if (data.type === "conductor") saveConductor(ss, data);
     else if (data.type === "updOC") updateEstadoOC(ss, data);
     return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
@@ -2439,6 +2501,37 @@ function getScriptCode(){
 function doGet(e) {
   try {
     var action = e&&e.parameter&&e.parameter.action ? e.parameter.action : '';
+    if(action==='getCamion'){
+      var camData={pagos_dia:[],camion:[]};
+      return ContentService.createTextOutput(JSON.stringify({ok:true,data:camData})).setMimeType(ContentService.MimeType.JSON);
+    }
+    if(action==='getConductor'){
+      var ss3=SpreadsheetApp.getActiveSpreadsheet();
+      var sh3=ss3.getSheetByName("Conductor");
+      if(!sh3) return ContentService.createTextOutput(JSON.stringify({conductor:[]})).setMimeType(ContentService.MimeType.JSON);
+      var vals3=sh3.getDataRange().getValues();
+      var conductor=[];
+      for(var i3=1;i3<vals3.length;i3++){
+        var r3=vals3[i3];
+        if(!r3[0])continue;
+        conductor.push({fecha:r3[0]?Utilities.formatDate(new Date(r3[0]),"GMT-5","yyyy-MM-dd"):"",valor:Number(r3[1])||0,obs:String(r3[2]||""),valeValor:Number(r3[3])||0,valeObs:String(r3[4]||""),registrado:String(r3[6]||"")});
+      }
+      return ContentService.createTextOutput(JSON.stringify({ok:true,conductor:conductor})).setMimeType(ContentService.MimeType.JSON);
+    }
+    if(action==='getCompras'){
+      var ss2=SpreadsheetApp.getActiveSpreadsheet();
+      var sh2=ss2.getSheetByName("Compras");
+      if(!sh2) return ContentService.createTextOutput(JSON.stringify({compras:[]})).setMimeType(ContentService.MimeType.JSON);
+      var vals2=sh2.getDataRange().getValues();
+      var compras=[];var grupos2={};
+      for(var i2=1;i2<vals2.length;i2++){
+        var row2=vals2[i2];var id2=row2[0];if(!id2)continue;
+        if(!grupos2[id2]){grupos2[id2]={id:String(row2[0]),fecha:row2[1]?Utilities.formatDate(new Date(row2[1]),"GMT-5","yyyy-MM-dd"):"",fechaEnt:row2[2]?Utilities.formatDate(new Date(row2[2]),"GMT-5","yyyy-MM-dd"):"",proveedor:row2[3]||"",responsable:row2[4]||"",pago:row2[5]||"",obs:row2[6]||"",estado:row2[14]||"solicitada",registrado:row2[15]||"",items:[]};}
+        if(row2[9])grupos2[id2].items.push({opId:row2[7]||"",categoria:row2[8]||"",descripcion:row2[9]||"",medida:row2[10]||"",color:row2[11]||"",cantidad:Number(row2[12])||1,consecutivo:row2[13]||""});
+      }
+      compras=Object.values(grupos2);
+      return ContentService.createTextOutput(JSON.stringify({ok:true,compras:compras})).setMimeType(ContentService.MimeType.JSON);
+    }
     if(action==='getPedidos'){
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var sh = ss.getSheetByName("Pedidos");
@@ -2504,6 +2597,11 @@ function savePedido(ss, data) {
       sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,patas,transp,data.total,data.obs||""]);
     });
   }
+}
+function saveConductor(ss, data) {
+  var sh = getOrCreate(ss, "Conductor", ["Fecha","Valor Dia","Observacion Dia","Valor Vale","Observacion Vale","Neto Dia","Registrado"]);
+  var neto = (data.valor||0) - (data.valeValor||0);
+  sh.appendRow([data.fecha, data.valor||0, data.obs||"", data.valeValor||0, data.valeObs||"", neto, data.registrado||new Date().toLocaleString("es-CO")]);
 }
 function saveCompra(ss, data) {
   var sh = getOrCreate(ss, "Compras", ["N OC","Fecha","Fecha Entrega","Proveedor","Responsable","Pago","Observaciones","OP","Categoria","Producto","Medida","Color","Cantidad","Consecutivo","Estado","Registrado"]);
