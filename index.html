@@ -946,7 +946,7 @@ async function guardarPedido(){
   if(!pago||!vend){ alerta('p3','⚠️ Selecciona la forma de pago y el atendido por','warn'); return; }
   const items = recogerItems();
   const total = items.reduce((s,i)=>s+i.precio*i.cantidad,0);
-  const totalHerrajes = items.reduce((s,i)=>s+(i.herrajeIncluido?(i.herrajeValor||30000)*i.cantidad:0),0);
+  const totalHerrajes = items.reduce((s,i)=>s+(i.herrajeIncluido&&!i.herrajePagado?(i.herrajeValor||0)*i.cantidad:0),0);
   const numEl = document.getElementById('op-num');
   const numOp = numEl?.value || siguienteId();
   const editId = numEl?.dataset?.editId;
@@ -1906,7 +1906,7 @@ function cargarListaRuta(){
   const aptos=STATE.pedidos.filter(function(p){return p.estado==='confirmado';});
   if(!aptos.length){el.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:.82rem;">No hay pedidos confirmados para despachar</div>';return;}
   el.innerHTML=aptos.map(function(p){
-    const herrajes=(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).length*30000;
+    const herrajes=(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).reduce(function(s,it){return s+(it.herrajeValor||0);},0);
     const esMl=(p.pago||'').toLowerCase().includes('mercado')||(p.canal||'').toLowerCase().includes('mercado');
     const saldo=(!esMl&&p.anticipo>0)?(p.total-p.anticipo):0;
     return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-bottom:1px solid var(--line);cursor:pointer;">'
@@ -1956,7 +1956,7 @@ function marcarEntregaCamion(id, resultado){
   const existIdx=entregas.findIndex(function(e){return e.opId===id;});
   const tarifaEl=document.getElementById('tarifa-'+id);
   const tarifa=tarifaEl?parseInt(tarifaEl.value||'0',10)||0:0;
-  const reg={opId:id,cliente:p.cliente,direccion:p.direccion,productos:(p.items||[]).map(function(it){return it.producto;}).join(', '),herrajes:(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).length*30000,tarifa,fecha:hoy,resultado,registrado:new Date().toLocaleString('es-CO')};
+  const reg={opId:id,cliente:p.cliente,direccion:p.direccion,productos:(p.items||[]).map(function(it){return it.producto;}).join(', '),herrajes:(p.items||[]).filter(function(it){return it.herrajeIncluido&&!it.herrajePagado;}).reduce(function(s2,it){return s2+(it.herrajeValor||0);},0),tarifa,fecha:hoy,resultado,registrado:new Date().toLocaleString('es-CO')};
   if(existIdx>=0)entregas[existIdx]=reg;else entregas.push(reg);
   localStorage.setItem('gc_entregas',JSON.stringify(entregas));
   // Cambiar estado del pedido
@@ -2679,7 +2679,7 @@ function doGet(e) {
             categoria:row[13]||"", producto:row[14]||"", medida:row[15]||"",
             color:row[16]||"", cantidad:Number(row[17])||1,
             herrajeIncluido:row[18]&&row[18]!=="No", herrajePagado:row[18]==="Incluido - Pagado",
-            herrajeValor:(function(){var t=String(row[18]||"");var m=t.match(/\$([\d]+)/);return m?parseInt(m[1],10):0;})(),
+            herrajeValor:(function(){var t=String(row[18]||"");var m=t.match(/\$([\d.]+)/);return m?parseInt(m[1].replace(/\./g,''),10):0;})(),
             pataVal:row[19]&&row[19]!=="No"?row[19]:"no", pataLabel:row[19]||"", pataPrecio:0, pataPagado:false,
             precio:Number(row[21])||0
           });
