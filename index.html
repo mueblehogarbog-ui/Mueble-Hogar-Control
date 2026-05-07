@@ -974,7 +974,8 @@ async function guardarPedido(){
   const url = localStorage.getItem('gc_sheet_url');
   if(url){
     try{
-      const r = await fetch(url,{method:'POST',body:JSON.stringify({...pedido,type:editId?'updPedido':'pedido'})});
+      const tipoEnvio = editId ? 'updPedido' : 'pedido';
+      const r = await fetch(url,{method:'POST',body:JSON.stringify({...pedido,type:tipoEnvio,editId:editId||null})});
       if(r.ok){ pedido.synced=true; guardar(); alerta('p3','✅ Pedido '+pedido.id+' guardado y enviado a Sheets','ok'); }
       else alerta('p3','⚠️ Guardado localmente. No se pudo enviar a Sheets','warn');
     }catch(e){ alerta('p3','⚠️ Guardado localmente. Sin conexión','warn'); }
@@ -2739,14 +2740,13 @@ function getOrCreate(ss, name, headers) {
 }
 function updatePedido(ss, data) {
   var sh = ss.getSheetByName("Pedidos"); if(!sh) return;
-  // Delete existing rows with this ID
+  var searchId = String(data.editId||data.id).trim();
   var vals = sh.getDataRange().getValues();
   for(var i=vals.length-1;i>=1;i--){
-    if(String(vals[i][0])===String(data.id)){
+    if(String(vals[i][0]).trim()===searchId){
       sh.deleteRow(i+1);
     }
   }
-  // Save updated version
   savePedido(ss, data);
 }
 function savePedido(ss, data) {
