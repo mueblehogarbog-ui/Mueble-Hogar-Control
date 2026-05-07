@@ -2486,34 +2486,68 @@ function sincronizarDesdeSheets(){
   const prog = document.getElementById('sync-progress');
   if(prog){ prog.style.display='block'; prog.textContent='⏳ Conectando con Sheets...'; }
 
-  fetch(url+'?action=getPedidos')
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(!data||!data.pedidos){
-        if(prog) prog.textContent='❌ No se pudieron cargar los pedidos. Verifica la URL.';
-        return;
+  Promise.all([
+    fetch(url+'?action=getPedidos').then(function(r){return r.json();}),
+    fetch(url+'?action=getCompras').then(function(r){return r.json();}),
+    fetch(url+'?action=getConductor').then(function(r){return r.json();})
+  ]).then(function(results){
+    const dataPed=results[0];
+    const dataOC=results[1];
+    const dataCond=results[2];
+
+    // ── PEDIDOS ──
+    const pedidosSheets=dataPed.pedidos||[];
+    const pedidosLocal=STATE.pedidos||[];
+    // Mapa local para preservar valores editados manualmente
+    const localMap={};
+    pedidosLocal.forEach(function(p){localMap[p.id]=p;});
+    // Merge: Sheets es fuente de verdad, pero preserva herrajeValor local si fue editado
+    const pedidosMerged=pedidosSheets.map(function(ps){
+      const pl=localMap[ps.id];
+      if(!pl)return ps;
+      if(pl.items&&ps.items){
+        ps.items=ps.items.map(function(si,idx){
+          const li=pl.items&&pl.items[idx];
+          // Si local tiene herrajeValor distinto al de Sheets, conservar el local
+          if(li&&li.herrajeValor>0&&li.herrajeValor!==si.herrajeValor){
+            si.herrajeValor=li.herrajeValor;
+          }
+          // Preservar también patas y tela si fueron editadas localmente
+          if(li&&li.pataVal&&li.pataVal!=='no') si.pataVal=li.pataVal;
+          if(li&&li.telaVal&&li.telaVal!=='no') si.telaVal=li.telaVal;
+          return si;
+        });
       }
-      const pedidosSheets = data.pedidos||[];
-      const pedidosLocal = STATE.pedidos||[];
-
-      // Merge: Sheets es la fuente de verdad
-      // Mantener pedidos locales que NO están en Sheets (recién creados sin sync)
-      const idsSheets = new Set(pedidosSheets.map(function(p){return p.id;}));
-      const soloLocales = pedidosLocal.filter(function(p){return !idsSheets.has(p.id);});
-
-      // Combinar: Sheets + los que solo están en local
-      STATE.pedidos = pedidosSheets.concat(soloLocales);
-      guardar();
-      actualizarDash();
-      actualizarBadge();
-      renderHist();
-
-      if(prog) prog.textContent='✅ Sincronizado: '+pedidosSheets.length+' pedidos desde Sheets + '+soloLocales.length+' solo locales. Total: '+STATE.pedidos.length;
-      initCfg();
-    })
-    .catch(function(err){
-      if(prog) prog.textContent='❌ Error de conexión: '+err.message;
+      return ps;
     });
+    const idsSheets=new Set(pedidosSheets.map(function(p){return p.id;}));
+    const soloLocalesPed=pedidosLocal.filter(function(p){return !idsSheets.has(p.id);});
+    STATE.pedidos=pedidosMerged.concat(soloLocalesPed);
+
+    // ── OC ──
+    const comprasSheets=dataOC.compras||[];
+    const comprasLocal=STATE.compras||[];
+    const idsOC=new Set(comprasSheets.map(function(x){return x.id;}));
+    const soloLocalesOC=comprasLocal.filter(function(x){return !idsOC.has(x.id);});
+    STATE.compras=comprasSheets.concat(soloLocalesOC);
+
+    // ── CONDUCTOR ──
+    if(dataCond&&dataCond.conductor&&dataCond.conductor.length){
+      const condSheets=dataCond.conductor;
+      const condLocal=JSON.parse(localStorage.getItem('gc_pagos_dia')||'[]');
+      const fechasSheets=new Set(condSheets.map(function(x){return x.fecha;}));
+      const soloLocalCond=condLocal.filter(function(x){return !fechasSheets.has(x.fecha);});
+      localStorage.setItem('gc_pagos_dia',JSON.stringify(condSheets.concat(soloLocalCond)));
+    }
+
+    guardar();
+    actualizarDash();actualizarBadge();renderHist();renderOCList();
+    const condMsg=dataCond&&dataCond.conductor?dataCond.conductor.length:0;
+    if(prog) prog.textContent='✅ '+pedidosSheets.length+' pedidos + '+comprasSheets.length+' OCs + '+condMsg+' días conductor desde Sheets';
+    initCfg();
+  }).catch(function(err){
+    if(prog) prog.textContent='❌ Error: '+err.message;
+  });
 }
 
 function importarDatos(event){
