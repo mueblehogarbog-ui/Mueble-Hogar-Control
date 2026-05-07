@@ -2498,10 +2498,25 @@ function sincronizarDesdeSheets(){
     // ── PEDIDOS ──
     const pedidosSheets=dataPed.pedidos||[];
     const pedidosLocal=STATE.pedidos||[];
-    // Sheets es fuente de verdad — herrajeValor viene como número directo
+    // Merge: Sheets es fuente de verdad, pero preserva herrajeValor local si fue editado
+    const localMap={};
+    pedidosLocal.forEach(function(p){localMap[p.id]=p;});
+    const pedidosMerged=pedidosSheets.map(function(ps){
+      const pl=localMap[ps.id];
+      if(!pl) return ps;
+      // Preservar herrajeValor local si es mayor que 0 y diferente al de Sheets
+      if(pl.items&&ps.items){
+        ps.items=ps.items.map(function(si,i){
+          const li=pl.items&&pl.items[i];
+          if(li&&li.herrajeValor>0) si.herrajeValor=li.herrajeValor;
+          return si;
+        });
+      }
+      return ps;
+    });
     const idsSheets=new Set(pedidosSheets.map(function(p){return p.id;}));
     const soloLocalesPed=pedidosLocal.filter(function(p){return !idsSheets.has(p.id);});
-    STATE.pedidos=pedidosSheets.concat(soloLocalesPed);
+    STATE.pedidos=pedidosMerged.concat(soloLocalesPed);
 
     // ── OC ──
     const comprasSheets=dataOC.compras||[];
@@ -2683,7 +2698,7 @@ function doGet(e) {
             cliente:row[3]||"", tel:String(row[4]||""), canal:row[5]||"",
             direccion:row[6]||"", pago:row[7]||"", anticipo:Number(row[8])||0,
             vendedor:row[9]||"", registradoEn:row[10]||"", entrega:row[11]||"",
-            estado:row[12]||"pendiente", obs:row[24]||"", total:Number(row[23])||0,
+            estado:row[12]||"pendiente", obs:row[22]||"", total:Number(row[21])||0,
             items:[], synced:true
           };
         }
@@ -2692,9 +2707,15 @@ function doGet(e) {
             categoria:row[13]||"", producto:row[14]||"", medida:row[15]||"",
             color:row[16]||"", cantidad:Number(row[17])||1,
             herrajeIncluido:row[18]&&row[18]!=="No", herrajePagado:row[18]==="Incluido - Pagado",
-            herrajeValor:(function(){var t=String(row[18]||"");var m=t.match(/\$([\d.]+)/);return m?parseInt(m[1].replace(/\./g,''),10):0;})(),
-            pataVal:row[20]&&row[20]!=="No"?row[20]:"no", pataLabel:row[20]||"", pataPrecio:0, pataPagado:false,
-            precio:Number(row[23])||0
+            herrajeValor:(function(){
+              var t=String(row[18]||"");
+              // Try to extract number after $ sign
+              var m=t.match(/\$([\d.,]+)/);
+              if(m){return parseInt(m[1].replace(/[.,]/g,''),10)||0;}
+              return 0;
+            })(),
+            pataVal:row[19]&&row[19]!=="No"?row[19]:"no", pataLabel:row[19]||"", pataPrecio:0, pataPagado:false,
+            precio:Number(row[21])||0
           });
         }
       }
@@ -2716,17 +2737,17 @@ function getOrCreate(ss, name, headers) {
   return sh;
 }
 function savePedido(ss, data) {
-  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","Valor Herraje","Patas","Transporte","Valor Transporte","TOTAL","Observaciones"]);
+  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","Patas","Transporte","TOTAL","Observaciones"]);
   var dir = [data.direccion, data.apto?"Apto: "+data.apto:"", data.conjunto||"", data.barrio||"", data.localidad||"", data.ciudad||""].filter(Boolean).join(", ");
   var items = (data.items||[]).filter(function(it){return it&&it.producto;});
   if(items.length===0){
-    sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,"","","","","","No",0,"","",0,data.total,data.obs||""]);
+    sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,"","","","","","No","","",data.total,data.obs||""]);
   } else {
     items.forEach(function(it){
       var herrajes = it.herrajeIncluido ? (it.herrajePagado ? "Incluido - Pagado $"+(it.herrajeValor||0) : "Si - CE $"+(it.herrajeValor||0)) : "No";
       var patas = (it.pataVal&&it.pataVal!=="no") ? it.pataLabel+(it.pataPagado?" - Pagado":" - CE $"+it.pataPrecio) : "No";
       var transp = data.transpCosto>0 ? (data.transpPagado?"Pagado $"+data.transpCosto:"CE $"+data.transpCosto) : "";
-      sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,it.herrajeValor||0,patas,transp,data.transpCosto||0,data.total,data.obs||""]);
+      sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,patas,transp,data.total,data.obs||""]);
     });
   }
 }
