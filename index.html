@@ -2732,10 +2732,20 @@ function doGet(e) {
             telaVal:(row[20]&&row[20]!=="No")?"si":"no",
             telaPrecio:(function(){var t=String(row[20]||'');var m=t.match(/\$(\d+)/);return m?parseInt(m[1],10):0;})(),
             telaPagado:(row[20]||"").includes("Pagado"),
-            precio:Number(row[22])||0
+            precio:0
           });
         }
       }
+      // Distribute total among items for display in remision
+      Object.values(grupos).forEach(function(ped){
+        if(ped.items.length===1){
+          ped.items[0].precio=ped.total;
+        } else if(ped.items.length>1){
+          // Split total equally for display
+          var priceEach=Math.round(ped.total/ped.items.length);
+          ped.items.forEach(function(it){it.precio=priceEach;});
+        }
+      });
       pedidos = Object.values(grupos);
       return ContentService.createTextOutput(JSON.stringify({ok:true,pedidos:pedidos})).setMimeType(ContentService.MimeType.JSON);
     }
