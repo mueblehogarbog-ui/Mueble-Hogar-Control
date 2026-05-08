@@ -2714,7 +2714,7 @@ function doGet(e) {
             cliente:row[3]||"", tel:String(row[4]||""), canal:row[5]||"",
             direccion:row[6]||"", pago:row[7]||"", anticipo:Number(row[8])||0,
             vendedor:row[9]||"", registradoEn:row[10]||"", entrega:row[11]||"",
-            estado:row[12]||"pendiente", obs:row[23]||"", total:Number(row[22])||0,
+            estado:row[12]||"pendiente", transpCosto:(function(){var t=String(row[21]||"");var m=t.match(/\$(\d+)/);return m?parseInt(m[1],10):0;})(), transpPagado:(row[21]||"").includes("Pagado"), obs:row[23]||"", total:Number(row[22])||0,
             items:[], synced:true
           };
         }
@@ -2722,10 +2722,17 @@ function doGet(e) {
           grupos[id].items.push({
             categoria:row[13]||"", producto:row[14]||"", medida:row[15]||"",
             color:row[16]||"", cantidad:Number(row[17])||1,
-            herrajeIncluido:row[18]&&row[18]!=="No", herrajePagado:row[18]==="Incluido - Pagado",
-            herrajeValor:(function(){var t=String(row[18]||'');var m=t.match(/\$([\d]+)/);return m?parseInt(m[1],10):0;})(),
-            pataVal:row[19]&&row[19]!=="No"?row[19]:"no", pataLabel:row[19]||"", pataPrecio:0, pataPagado:false,
-            precio:Number(row[21])||0
+            herrajeIncluido:row[18]&&row[18]!=="No",
+            herrajePagado:(row[18]||"").includes("Pagado"),
+            herrajeValor:(function(){var t=String(row[18]||'');var m=t.match(/\$(\d+)/);return m?parseInt(m[1],10):0;})(),
+            pataVal:(row[19]&&row[19]!=="No")?row[19]:"no",
+            pataLabel:(row[19]&&row[19]!=="No")?row[19]:"",
+            pataPrecio:(function(){var t=String(row[19]||'');var m=t.match(/\$(\d+)/);return m?parseInt(m[1],10):0;})(),
+            pataPagado:(row[19]||"").includes("Pagado"),
+            telaVal:(row[20]&&row[20]!=="No")?"si":"no",
+            telaPrecio:(function(){var t=String(row[20]||'');var m=t.match(/\$(\d+)/);return m?parseInt(m[1],10):0;})(),
+            telaPagado:(row[20]||"").includes("Pagado"),
+            precio:Number(row[22])||0
           });
         }
       }
@@ -2758,7 +2765,7 @@ function updatePedido(ss, data) {
   savePedido(ss, data);
 }
 function savePedido(ss, data) {
-  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","Patas","Tela Mascotas","Transporte","TOTAL","Observaciones"]);
+  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","PATAS","TELA MASCOTAS","TRANSPORTE","TOTAL","Observaciones"]);
   var dir = [data.direccion, data.apto?"Apto: "+data.apto:"", data.conjunto||"", data.barrio||"", data.localidad||"", data.ciudad||""].filter(Boolean).join(", ");
   var items = (data.items||[]).filter(function(it){return it&&it.producto;});
   if(items.length===0){
