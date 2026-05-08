@@ -2499,20 +2499,19 @@ function sincronizarDesdeSheets(){
     // ── PEDIDOS ──
     const pedidosSheets=dataPed.pedidos||[];
     const pedidosLocal=STATE.pedidos||[];
-    // Merge: Sheets es fuente de verdad, pero preserva herrajeValor local si fue editado
+    // Merge: para pedidos que existen localmente, mantener items locales
+    // Solo traer de Sheets pedidos que NO existen localmente
     const localMap={};
     pedidosLocal.forEach(function(p){localMap[p.id]=p;});
     const pedidosMerged=pedidosSheets.map(function(ps){
       const pl=localMap[ps.id];
-      if(!pl) return ps;
-      // Preservar herrajeValor local si es mayor que 0 y diferente al de Sheets
-      if(pl.items&&ps.items){
-        ps.items=ps.items.map(function(si,i){
-          const li=pl.items&&pl.items[i];
-          if(li&&li.herrajeValor>0) si.herrajeValor=li.herrajeValor;
-          return si;
-        });
+      if(pl){
+        // Pedido existe localmente - actualizar solo estado y fecha desde Sheets
+        pl.estado=ps.estado||pl.estado;
+        pl.synced=true;
+        return pl;
       }
+      // Pedido nuevo desde Sheets - traer completo
       return ps;
     });
     const idsSheets=new Set(pedidosSheets.map(function(p){return p.id;}));
