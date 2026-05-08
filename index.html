@@ -1235,6 +1235,13 @@ function generarRemision(){
   let patas_row='';
   patasPend.forEach(function(it){ patas_row+='<tr style="background:#EDE9FE;"><td colspan="4" style="padding:8px 12px;font-size:13px;color:#6D28D9;font-weight:700;">'+it.pataLabel+' — Saldo contraentrega</td><td style="padding:8px 12px;text-align:right;font-weight:800;font-size:14px;color:#6D28D9;">'+fmt(it.pataPrecio)+'</td></tr>'; });
   patasPag.forEach(function(it){ patas_row+='<tr style="background:#F5F3FF;"><td colspan="4" style="padding:8px 12px;font-size:13px;color:#6D28D9;font-weight:700;">'+it.pataLabel+' — Incluidas (pagadas)</td><td style="padding:8px 12px;text-align:right;font-size:14px;color:#6D28D9;"></td></tr>'; });
+  // Tela mascotas row
+  let tela_row='';
+  (p.items||[]).forEach(function(it){
+    if(!it.telaVal||it.telaVal==='no'||!it.telaPrecio) return;
+    if(!it.telaPagado) tela_row+='<tr style="background:#FDF2F8;"><td colspan="4" style="padding:8px 12px;font-size:13px;color:#9D174D;font-weight:700;">Tela amigable mascotas — Saldo contraentrega</td><td style="padding:8px 12px;text-align:right;font-weight:800;font-size:14px;color:#9D174D;">'+fmt(it.telaPrecio)+'</td></tr>';
+    else tela_row+='<tr style="background:#FDF2F8;"><td colspan="4" style="padding:8px 12px;font-size:13px;color:#9D174D;font-weight:700;">Tela amigable mascotas — Incluida (pagada)</td><td style="padding:8px 12px;text-align:right;font-weight:800;font-size:14px;color:#9D174D;"></td></tr>';
+  });
   let transp_row='';
   if(p.transpCosto>0){
     if(!p.transpPagado) transp_row='<tr style="background:#D1FAE5;"><td colspan="4" style="padding:8px 12px;font-size:13px;color:#065F46;font-weight:700;">🚐 Transporte — Saldo contraentrega</td><td style="padding:8px 12px;text-align:right;font-weight:800;font-size:14px;color:#065F46;">'+fmt(p.transpCosto)+'</td></tr>';
@@ -1292,7 +1299,7 @@ function generarRemision(){
     +'<tbody>'+filasProd+'</tbody>'
     +'<tfoot><tr style="background:#111C2E;color:white;"><td colspan="4" style="padding:12px;font-weight:700;font-size:15px;">TOTAL</td>'
     +'<td style="padding:12px;text-align:right;font-weight:800;font-size:16px;">'+fmt(p.total)+'</td></tr>'
-    +anclaje_row+patas_row+transp_row+anticipo_rows
+    +anclaje_row+patas_row+tela_row+transp_row+anticipo_rows
     +'</tfoot></table>'
     +obs_block
     +'<div style="margin-top:28px;padding:16px;border:1.5px solid #E5E7EB;border-radius:10px;">'
@@ -2749,7 +2756,7 @@ function updatePedido(ss, data) {
   savePedido(ss, data);
 }
 function savePedido(ss, data) {
-  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","Patas","Transporte","TOTAL","Observaciones"]);
+  var sh = getOrCreate(ss, "Pedidos", ["N Orden","Fecha Pedido","Fecha Entrega","Cliente","Telefono","Canal Venta","Direccion","Forma Pago","Anticipo","Atendido Por","Hora Registro","Tipo Entrega","Estado","Categoria","Producto","Medida","Color","Cantidad","Herrajes","Patas","Tela Mascotas","Transporte","TOTAL","Observaciones"]);
   var dir = [data.direccion, data.apto?"Apto: "+data.apto:"", data.conjunto||"", data.barrio||"", data.localidad||"", data.ciudad||""].filter(Boolean).join(", ");
   var items = (data.items||[]).filter(function(it){return it&&it.producto;});
   if(items.length===0){
@@ -2758,8 +2765,9 @@ function savePedido(ss, data) {
     items.forEach(function(it){
       var herrajes = it.herrajeIncluido ? (it.herrajePagado ? "Incluido - Pagado $"+(it.herrajeValor||0) : "Si - CE $"+(it.herrajeValor||0)) : "No";
       var patas = (it.pataVal&&it.pataVal!=="no") ? it.pataLabel+(it.pataPagado?" - Pagado":" - CE $"+it.pataPrecio) : "No";
+      var tela = (it.telaVal&&it.telaVal!=="no"&&it.telaPrecio>0) ? "Tela mascotas - "+(it.telaPagado?"Pagado":"CE $"+it.telaPrecio) : "No";
       var transp = data.transpCosto>0 ? (data.transpPagado?"Pagado $"+data.transpCosto:"CE $"+data.transpCosto) : "";
-      sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,patas,transp,data.total,data.obs||""]);
+      sh.appendRow([data.id,data.fecha,data.fechaEnt,data.cliente,data.tel,data.canal||"",dir,data.pago,data.anticipo||0,data.vendedor,data.registradoEn||"",data.entrega,data.estado,it.categoria||"",it.producto||"",it.medida||"",it.color||"",it.cantidad||1,herrajes,patas,tela,transp,data.total,data.obs||""]);
     });
   }
 }
