@@ -944,6 +944,28 @@ function siguienteId(){
 async function guardarPedido(){
   const pago = gv('op-pago'), vend = gv('op-vend');
   if(!pago||!vend){ alerta('p3','⚠️ Selecciona la forma de pago y el atendido por','warn'); return; }
+  // Verificar que herrajes tengan valor si están incluidos
+  let herMissingVal = false;
+  document.querySelectorAll('#lista-productos .prod-item').forEach(function(p){
+    const id = p.dataset.id;
+    const herVal = gv('her-'+id);
+    if(herVal==='si'){
+      const hervEl = document.getElementById('herv-'+id);
+      if(!hervEl||!hervEl.value||hervEl.value==='$0') herMissingVal = true;
+    }
+  });
+  if(herMissingVal){ alerta('p3','⚠️ Ingresa el valor de los herrajes antes de guardar','warn'); return; }
+  // Verificar patas
+  let pataMissingVal = false;
+  document.querySelectorAll('#lista-productos .prod-item').forEach(function(p){
+    const id = p.dataset.id;
+    const patVal = gv('pat-'+id)||'no';
+    const pataObj = PATAS_OPTS.find(function(x){return x.val===patVal;})||{precio:0};
+    if(pataObj.precio>0 && gv('pat-pago-'+id)!=='pagado'){
+      const patEl = document.getElementById('pat-val-'+id);
+      // patas tienen precio fijo, no campo libre — están bien
+    }
+  });
   const items = recogerItems();
   const total = items.reduce((s,i)=>s+i.precio*i.cantidad,0);
   const totalHerrajes = items.reduce((s,i)=>s+(i.herrajeIncluido&&!i.herrajePagado?(i.herrajeValor||0)*i.cantidad:0),0);
@@ -2506,24 +2528,10 @@ function sincronizarDesdeSheets(){
     // ── PEDIDOS ──
     const pedidosSheets=dataPed.pedidos||[];
     const pedidosLocal=STATE.pedidos||[];
-    // Merge: para pedidos que existen localmente, mantener items locales
-    // Solo traer de Sheets pedidos que NO existen localmente
-    const localMap={};
-    pedidosLocal.forEach(function(p){localMap[p.id]=p;});
-    const pedidosMerged=pedidosSheets.map(function(ps){
-      const pl=localMap[ps.id];
-      if(pl){
-        // Pedido existe localmente - actualizar solo estado y fecha desde Sheets
-        pl.estado=ps.estado||pl.estado;
-        pl.synced=true;
-        return pl;
-      }
-      // Pedido nuevo desde Sheets - traer completo
-      return ps;
-    });
+    // Sheets es la fuente de verdad — trae todo
     const idsSheets=new Set(pedidosSheets.map(function(p){return p.id;}));
     const soloLocalesPed=pedidosLocal.filter(function(p){return !idsSheets.has(p.id);});
-    STATE.pedidos=pedidosMerged.concat(soloLocalesPed);
+    STATE.pedidos=pedidosSheets.concat(soloLocalesPed);
 
     // ── OC ──
     const comprasSheets=dataOC.compras||[];
@@ -2706,7 +2714,7 @@ function doGet(e) {
             cliente:row[3]||"", tel:String(row[4]||""), canal:row[5]||"",
             direccion:row[6]||"", pago:row[7]||"", anticipo:Number(row[8])||0,
             vendedor:row[9]||"", registradoEn:row[10]||"", entrega:row[11]||"",
-            estado:row[12]||"pendiente", obs:row[22]||"", total:Number(row[21])||0,
+            estado:row[12]||"pendiente", obs:row[23]||"", total:Number(row[22])||0,
             items:[], synced:true
           };
         }
@@ -2715,13 +2723,7 @@ function doGet(e) {
             categoria:row[13]||"", producto:row[14]||"", medida:row[15]||"",
             color:row[16]||"", cantidad:Number(row[17])||1,
             herrajeIncluido:row[18]&&row[18]!=="No", herrajePagado:row[18]==="Incluido - Pagado",
-            herrajeValor:(function(){
-              var t=String(row[18]||"");
-              // Try to extract number after $ sign
-              var m=t.match(/\$([\d.,]+)/);
-              if(m){return parseInt(m[1].replace(/[.,]/g,''),10)||0;}
-              return 0;
-            })(),
+            herrajeValor:(function(){var t=String(row[18]||'');var m=t.match(/\$([\d]+)/);return m?parseInt(m[1],10):0;})(),
             pataVal:row[19]&&row[19]!=="No"?row[19]:"no", pataLabel:row[19]||"", pataPrecio:0, pataPagado:false,
             precio:Number(row[21])||0
           });
