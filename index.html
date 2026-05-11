@@ -1536,7 +1536,15 @@ function generarPDFcorte(){
         if(!grupos[prov2])grupos[prov2]=[];
         const cons2=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
         const label2=pt.getLabel(row);
-        grupos[prov2].push({categoria:'',producto:label2,medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:cons2?.value||''});
+        const consVal2=cons2?.value||'';
+        const exItem2=grupos[prov2].find(function(x){return x.producto===label2&&x.medida===row.medida&&x.color===row.color;});
+        if(exItem2){
+          exItem2.cantidad=String(parseInt(exItem2.cantidad||1)+(row.cantidad||1));
+          if(consVal2&&!exItem2.consecutivos.includes(consVal2)) exItem2.consecutivos.push(consVal2);
+          exItem2.consecutivo=exItem2.consecutivos.join(' · ');
+        } else {
+          grupos[prov2].push({categoria:'',producto:label2,medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:consVal2,consecutivos:consVal2?[consVal2]:[]});
+        }
       });
       return;
     }
@@ -1620,18 +1628,29 @@ function generarResumenCortador(){
   _corteRows.forEach(function(row,idx){
     const splitEl=document.getElementById('split-marker-'+idx);
     if(splitEl&&splitEl.value==='1'){
-      const partsCort2=[{suffix:'base'},{suffix:'esp'},{suffix:'col'}];
-      partsCort2.forEach(function(pt){
-        const provEl=document.getElementById('prov-row-'+idx+'-'+pt.suffix);
+      // Combo separado: mostrar en UNA sola fila con todos los consecutivos y proveedores
+      const sufijos2=['base','esp','col'];
+      var proveedoresParts=[];
+      var consecutivosParts=[];
+      sufijos2.forEach(function(sf){
+        const provEl=document.getElementById('prov-row-'+idx+'-'+sf);
         if(!provEl||!provEl.value)return;
-        const consEl2=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
+        const consEl2=document.getElementById('cons-row-'+idx+'-'+sf);
         const cons2=consEl2?consEl2.value.trim():'';
-        const prov2=provEl.value;
-        const key2=row.producto+'|'+pt.suffix+'|'+row.medida+'|'+row.color;
-        const ex2=agrup.find(function(x){return x.key===key2;});
-        if(ex2){ex2.cantidad+=(row.cantidad||1);if(cons2)ex2.consecutivos.push(cons2);}
-        else agrup.push({key:key2,categoria:'',producto:row.producto+' ('+pt.suffix+')',medida:row.medida,color:row.color,cantidad:row.cantidad||1,ops:[row.opId],consecutivos:cons2?[cons2]:[],proveedor:prov2,pataLabel:''});
+        if(provEl.value&&!proveedoresParts.includes(provEl.value)) proveedoresParts.push(provEl.value);
+        if(cons2&&!consecutivosParts.includes(cons2)) consecutivosParts.push(cons2);
       });
+      const keySplit=row.producto+'|'+row.medida+'|'+row.color;
+      const exSplit=agrup.find(function(x){return x.key===keySplit;});
+      if(exSplit){
+        exSplit.cantidad+=(row.cantidad||1);
+        consecutivosParts.forEach(function(cv){if(!exSplit.consecutivos.includes(cv))exSplit.consecutivos.push(cv);});
+        proveedoresParts.forEach(function(pv){if(!exSplit.proveedores.includes(pv))exSplit.proveedores.push(pv);});
+      } else {
+        agrup.push({key:keySplit,categoria:'Combos',producto:row.producto,medida:row.medida,color:row.color,
+          cantidad:row.cantidad||1,ops:[row.opId],consecutivos:consecutivosParts,
+          proveedores:proveedoresParts,proveedor:proveedoresParts.join(' / '),pataLabel:''});
+      }
       return;
     }
     const provEl=document.getElementById('prov-row-'+idx);
@@ -1654,7 +1673,7 @@ function generarResumenCortador(){
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:center;font-weight:700;">'+(i+1)+'</td>'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;">'
       +'<strong style="font-size:14px;">'+it.producto+'</strong>'
-      +(it.proveedor?'<div style="font-size:11px;color:#6D28D9;font-weight:600;margin-top:2px;">'+it.proveedor+'</div>':'')
+      +((it.proveedores&&it.proveedores.length)?'<div style="font-size:11px;color:#6D28D9;font-weight:600;margin-top:2px;">'+it.proveedores.join(' / ')+'</div>':(it.proveedor?'<div style="font-size:11px;color:#6D28D9;font-weight:600;margin-top:2px;">'+it.proveedor+'</div>':''))
       +((it.consecutivos&&it.consecutivos.length)?'<div style="font-size:12px;background:#FEF3C7;color:#92400E;padding:2px 6px;border-radius:4px;margin-top:3px;display:inline-block;font-weight:700;">Consec: '+it.consecutivos.join(' · ')+'</div>':'<div style="font-size:11px;color:#D1D5DB;margin-top:2px;">Sin consecutivo</div>')
       +'</td>'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:center;font-size:13px;">'+it.medida+'</td>'
