@@ -1545,7 +1545,15 @@ function generarPDFcorte(){
     const prov=provEl.value;
     if(!grupos[prov])grupos[prov]=[];
     const consEl=document.getElementById('cons-row-'+idx);
-    grupos[prov].push({categoria:row.categoria||'',producto:row.producto||'',medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:consEl?.value||''});
+    const consVal=consEl?.value||'';
+    const exItem=grupos[prov].find(function(x){return x.producto===row.producto&&x.medida===row.medida&&x.color===row.color;});
+    if(exItem){
+      exItem.cantidad=String(parseInt(exItem.cantidad||1)+(row.cantidad||1));
+      if(consVal&&!exItem.consecutivos.includes(consVal)) exItem.consecutivos.push(consVal);
+      exItem.consecutivo=exItem.consecutivos.join(' · ');
+    } else {
+      grupos[prov].push({categoria:row.categoria||'',producto:row.producto||'',medida:row.medida||'',color:row.color||'',cantidad:String(row.cantidad||1),consecutivo:consVal,consecutivos:consVal?[consVal]:[]});
+    }
   });
   if(!Object.keys(grupos).length){alert('Selecciona al menos un proveedor');return;}
   const hoy=new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
@@ -1610,25 +1618,45 @@ function generarResumenCortador(){
   // Agrupar todos los items sin importar proveedor
   const agrup=[];
   _corteRows.forEach(function(row,idx){
+    const splitEl=document.getElementById('split-marker-'+idx);
+    if(splitEl&&splitEl.value==='1'){
+      const partsCort2=[{suffix:'base'},{suffix:'esp'},{suffix:'col'}];
+      partsCort2.forEach(function(pt){
+        const provEl=document.getElementById('prov-row-'+idx+'-'+pt.suffix);
+        if(!provEl||!provEl.value)return;
+        const consEl2=document.getElementById('cons-row-'+idx+'-'+pt.suffix);
+        const cons2=consEl2?consEl2.value.trim():'';
+        const prov2=provEl.value;
+        const key2=row.producto+'|'+pt.suffix+'|'+row.medida+'|'+row.color;
+        const ex2=agrup.find(function(x){return x.key===key2;});
+        if(ex2){ex2.cantidad+=(row.cantidad||1);if(cons2)ex2.consecutivos.push(cons2);}
+        else agrup.push({key:key2,categoria:'',producto:row.producto+' ('+pt.suffix+')',medida:row.medida,color:row.color,cantidad:row.cantidad||1,ops:[row.opId],consecutivos:cons2?[cons2]:[],proveedor:prov2,pataLabel:''});
+      });
+      return;
+    }
+    const provEl=document.getElementById('prov-row-'+idx);
+    const prov=provEl?provEl.value:'';
     const consEl=document.getElementById('cons-row-'+idx);
     const cons=consEl?consEl.value.trim():'';
-    const key=row.categoria+'|'+row.producto+'|'+row.medida+'|'+row.color;
+    const key=row.categoria+'|'+row.producto+'|'+row.medida+'|'+row.color+'|'+prov;
     const ex=agrup.find(function(x){return x.key===key;});
     if(ex){
       ex.cantidad+=(row.cantidad||1);
-      if(cons&&!ex.consecutivos.includes(cons)) ex.consecutivos.push(cons);
+      if(cons) ex.consecutivos.push(cons);
       if(!ex.ops.includes(row.opId)) ex.ops.push(row.opId);
     } else {
       agrup.push({key,categoria:row.categoria,producto:row.producto,medida:row.medida,color:row.color,
-        cantidad:row.cantidad||1,ops:[row.opId],consecutivos:cons?[cons]:[],pataLabel:row.pataLabel||''});
+        cantidad:row.cantidad||1,ops:[row.opId],consecutivos:cons?[cons]:[],proveedor:prov,pataLabel:row.pataLabel||''});
     }
   });
   const filas=agrup.map(function(it,i){
     return '<tr style="background:'+(i%2===0?'#F9FAFB':'white')+';">'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:center;font-weight:700;">'+(i+1)+'</td>'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;">'
-      +(it.categoria?'<span style="font-size:10px;background:#F3F4F6;color:#6B7280;padding:1px 5px;border-radius:3px;margin-right:4px;">'+it.categoria+'</span>':'')
-      +'<strong style="font-size:14px;">'+it.producto+'</strong></td>'
+      +'<strong style="font-size:14px;">'+it.producto+'</strong>'
+      +(it.proveedor?'<div style="font-size:11px;color:#6D28D9;font-weight:600;margin-top:2px;">'+it.proveedor+'</div>':'')
+      +((it.consecutivos&&it.consecutivos.length)?'<div style="font-size:12px;background:#FEF3C7;color:#92400E;padding:2px 6px;border-radius:4px;margin-top:3px;display:inline-block;font-weight:700;">Consec: '+it.consecutivos.join(' · ')+'</div>':'<div style="font-size:11px;color:#D1D5DB;margin-top:2px;">Sin consecutivo</div>')
+      +'</td>'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:center;font-size:13px;">'+it.medida+'</td>'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:center;font-size:13px;">'+it.color+'</td>'
       +'<td style="padding:10px 12px;border-bottom:1px solid #E5E7EB;text-align:center;font-weight:800;font-size:16px;">'+it.cantidad+'</td>'
